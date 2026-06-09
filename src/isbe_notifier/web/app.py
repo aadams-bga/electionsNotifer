@@ -27,6 +27,7 @@ from ..models import (
 from ..notify import tokens
 from ..notify.emailer import send_email
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).parent

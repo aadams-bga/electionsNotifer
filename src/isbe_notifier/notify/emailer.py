@@ -40,7 +40,11 @@ def _build_message(
 
 class ConsoleEmailBackend:
     def send(self, msg: EmailMessage) -> None:
-        logger.info("EMAIL (console backend)\n%s", msg.as_string())
+        # Decoded body (not raw MIME) so links can be copied straight from logs.
+        logger.info(
+            "EMAIL (console backend)\nTo: %s\nSubject: %s\n%s",
+            msg["To"], msg["Subject"], msg.get_content(),
+        )
 
 
 class SesEmailBackend:

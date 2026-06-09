@@ -11,13 +11,12 @@ COPY pyproject.toml uv.lock ./
 RUN uv export --frozen --no-dev --no-emit-project > requirements.txt \
     && uv pip install --system -r requirements.txt
 
-COPY alembic.ini ./
+COPY alembic.ini docker-entrypoint.sh ./
 COPY migrations ./migrations
 COPY src ./src
-RUN uv pip install --system --no-deps .
+RUN uv pip install --system --no-deps . && chmod +x docker-entrypoint.sh
 
 EXPOSE 8000
 
-# Default command is the web app; the poller service overrides with
-# `python -m isbe_notifier.poller` (see docker-compose.yaml / Railway settings).
-CMD ["uvicorn", "isbe_notifier.web.app:app", "--host", "0.0.0.0", "--port", "8000"]
+# SERVICE_ROLE=poller runs the poller; default runs migrations + web app.
+CMD ["./docker-entrypoint.sh"]

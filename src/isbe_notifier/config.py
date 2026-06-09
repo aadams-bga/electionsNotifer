@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,6 +8,17 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     database_url: str = "postgresql+psycopg://isbe:isbe@localhost:5432/isbe"
+
+    @field_validator("database_url")
+    @classmethod
+    def _psycopg_scheme(cls, v: str) -> str:
+        # Railway/Heroku-style URLs use postgresql://; SQLAlchemy needs the
+        # psycopg3 driver spelled out.
+        if v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+psycopg://", 1)
+        if v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+psycopg://", 1)
+        return v
 
     # Public base URL of the web app, used in email links and push payloads.
     base_url: str = "http://localhost:8000"

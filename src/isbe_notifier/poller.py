@@ -185,9 +185,10 @@ def notify_filing(session: Session, filing: Filing) -> int:
     content = build_content(filing)
     sent = 0
     for rec in recipients:
-        if rec.wants_email and rec.email_verified:
+        if rec.wants_email and rec.email and rec.email_verified:
             sent += _send_one(session, filing.id, rec.subscriber_id, "email", lambda r=rec: (
-                send_email(r.email, content.subject, content.body_text, content.url)
+                send_email(r.email, content.subject, content.body_text, content.url,
+                           r.subscriber_id)
             ))
         if rec.wants_push:
             pushes = session.scalars(
@@ -292,6 +293,9 @@ def poll_once(client: httpx.Client) -> int:
     return len(new_seqs)
 
 
+COMMITTEE_SYNC_INTERVAL = 60 * 60 * 24
+
+
 def main() -> None:
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
@@ -299,7 +303,20 @@ def main() -> None:
     settings = get_settings()
     client = make_client()
     logger.info("poller starting; interval %ss", settings.poll_interval_seconds)
+
+    from .committee_sync import sync_committees
+
+    last_committee_sync = 0.0
     while True:
+        if time.monotonic() - last_committee_sync > COMMITTEE_SYNC_INTERVAL or (
+            last_committee_sync == 0.0
+        ):
+            try:
+                sync_committees(client)
+                last_committee_sync = time.monotonic()
+            except Exception:  # noqa: BLE001 — sync failure must not stop polling
+                logger.exception("committee sync failed; will retry next cycle")
+                last_committee_sync = time.monotonic() - COMMITTEE_SYNC_INTERVAL + 3600
         started = time.monotonic()
         try:
             n = poll_once(client)

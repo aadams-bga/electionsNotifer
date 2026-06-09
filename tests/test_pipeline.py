@@ -58,7 +58,9 @@ def fake_fetch(monkeypatch):
 def sent_emails(monkeypatch):
     sent = []
     monkeypatch.setattr(
-        poller, "send_email", lambda to, subject, body, url: sent.append((to, subject, body))
+        poller,
+        "send_email",
+        lambda to, subject, body, url, subscriber_id: sent.append((to, subject, body)),
     )
     return sent
 

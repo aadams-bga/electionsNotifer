@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<form id="manage-form" data-vapid-key="{{ vapid_public_key }}" data-token="{{ token }}">
+  <h2>Manage your alerts{% if email %} — {{ email }}{% endif %}</h2>
+
+  <h3>CPS Board races</h3>
+  <div class="race-grid">
+    {% for race in races %}
+    <label class="race">
+      <input type="checkbox" name="race" value="{{ race.slug }}"
+             {% if race.slug in selected_race_slugs %}checked{% endif %}> {{ race.label }}
+    </label>
+    {% endfor %}
+  </div>
+
+  <h3>Committees you follow</h3>
+  <div class="committee-search">
+    <input type="search" id="committee-q" placeholder="Search by committee name or ID…"
+           autocomplete="off">
+    <ul id="committee-results" hidden></ul>
+    <ul id="committee-chosen">
+      {% for c in followed_committees %}
+      <li data-id="{{ c.id }}">{{ c.name }} <button type="button" class="remove">×</button></li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <h3>Channels</h3>
+  <label class="channel">
+    <input type="checkbox" id="wants-email" {% if wants_email %}checked{% endif %}
+           {% if not email %}disabled{% endif %}> Email
+  </label>
+  <label class="channel">
+    <input type="checkbox" id="wants-push" {% if wants_push %}checked{% endif %}>
+    Push notifications on this device
+  </label>
+
+  <button type="submit">Save changes</button>
+  <p id="form-status" role="status"></p>
+</form>
+{% endblock %}
+{% block scripts %}<script src="/static/app.js"></script>{% endblock %}

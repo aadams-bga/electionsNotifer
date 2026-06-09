@@ -49,7 +49,7 @@ def matched_race_ids(session: Session, filing: Filing) -> set[int]:
 @dataclass
 class MatchedRecipient:
     subscriber_id: int
-    email: str
+    email: str | None
     email_verified: bool
     wants_email: bool
     wants_push: bool

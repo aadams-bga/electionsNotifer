@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Admin</h2>
+<h3>Poller</h3>
+<ul>
+  <li>Last poll: {{ state.last_poll_at if state else "never" }}</li>
+  <li>Last success: {{ state.last_success_at if state else "never" }}</li>
+  <li>Consecutive errors: {{ state.consecutive_errors if state else 0 }}</li>
+  <li>High-water sequence: {{ state.max_guid_seq if state else 0 }}</li>
+</ul>
+<h3>Counts</h3>
+<ul>
+  {% for k, v in counts.items() %}<li>{{ k }}: {{ v }}</li>{% endfor %}
+</ul>
+<h3>Latest 25 feed items</h3>
+<table>
+  <tr><th>Seq</th><th>Committee</th><th>Type</th><th>Filed</th><th>Processed</th><th>Error</th></tr>
+  {% for item in recent %}
+  <tr>
+    <td>{{ item.guid_seq }}</td>
+    <td>{{ item.committee_name }}</td>
+    <td>{{ item.report_type }}</td>
+    <td>{{ item.pub_date }}</td>
+    <td>{{ "✓" if item.processed_at else "…" }}</td>
+    <td>{{ item.error or "" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

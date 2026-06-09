@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="message {% if error %}error{% endif %}">{{ message }}</p>
+<p><a href="/">← Back to signup</a></p>
+{% endblock %}

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ site_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="icon" href="/static/icon-192.png">
+  <meta name="theme-color" content="#1a2e4a">
+  <link rel="apple-touch-icon" href="/static/icon-192.png">
+</head>
+<body>
+  <header>
+    <h1>{{ site_name }}</h1>
+    <p class="tagline">Real-time alerts when Illinois campaign finance reports are filed</p>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer>
+    <p>Data source: <a href="https://elections.il.gov">Illinois State Board of Elections</a>.
+       Alerts are sent as reports appear in the state's public feed.</p>
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

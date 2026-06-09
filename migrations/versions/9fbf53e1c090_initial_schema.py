@@ -1,14 +1,15 @@
 """initial schema
 
-Revision ID: 33199f367138
+Revision ID: 9fbf53e1c090
 Revises: 
-Create Date: 2026-06-09 14:22:03.850848
+Create Date: 2026-06-09 14:29:26.014000
 
 """
-import sqlalchemy as sa
 from alembic import op
+import sqlalchemy as sa
 
-revision = '33199f367138'
+
+revision = '9fbf53e1c090'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -60,7 +61,7 @@ def upgrade() -> None:
     )
     op.create_table('subscribers',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('email', sa.String(length=320), nullable=False),
+    sa.Column('email', sa.String(length=320), nullable=True),
     sa.Column('email_verified_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('id')

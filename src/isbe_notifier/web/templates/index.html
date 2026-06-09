@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<form id="signup-form" data-vapid-key="{{ vapid_public_key }}">
+  <section>
+    <h2>1. Pick what to follow</h2>
+    <h3>Chicago Public Schools Board races (2026)</h3>
+    <div class="race-grid">
+      {% for race in races %}
+      <label class="race">
+        <input type="checkbox" name="race" value="{{ race.slug }}"> {{ race.label }}
+      </label>
+      {% endfor %}
+    </div>
+
+    <h3>Or follow any Illinois committee</h3>
+    <div class="committee-search">
+      <input type="search" id="committee-q" placeholder="Search by committee name or ID…"
+             autocomplete="off">
+      <ul id="committee-results" hidden></ul>
+      <ul id="committee-chosen"></ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. How should we reach you?</h2>
+    <label class="channel">
+      <input type="checkbox" id="wants-email" checked> Email
+    </label>
+    <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+    <label class="channel">
+      <input type="checkbox" id="wants-push"> Push notifications on this device
+    </label>
+    <p class="hint" id="ios-hint" hidden>On iPhone/iPad: first tap Share → “Add to Home
+      Screen,” then open the app to enable push notifications.</p>
+  </section>
+
+  <button type="submit" id="submit-btn">Sign up for alerts</button>
+  <p id="form-status" role="status"></p>
+</form>
+{% endblock %}
+{% block scripts %}<script src="/static/app.js"></script>{% endblock %}

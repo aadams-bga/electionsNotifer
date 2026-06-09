@@ -134,7 +134,8 @@ class Subscriber(Base):
     __tablename__ = "subscribers"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
+    # Nullable: push-only subscribers have no email address.
+    email: Mapped[str | None] = mapped_column(String(320), unique=True, index=True)
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 

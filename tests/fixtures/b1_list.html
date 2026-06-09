@@ -1,0 +1,420 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+
+    <head><title>
+	B1 Report List
+</title><meta name="viewport" content="width=device-width,initial-scale=1" /><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><meta http-equiv="Page-Enter" content="blendTrans(Duration=0)" /><meta http-equiv="Page-Exit" content="blendTrans(Duration=0)" /><meta http-equiv="X-UA-Compatible" content="IE=edge" /><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" /><meta http-equiv="Pragma" content="no-cache" /><meta http-equiv="Expires" content="-1" /><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes" />
+
+        
+        
+        
+        
+        <!-- COMMENT OUT TO DISABLE MOBILE -->
+        
+
+        <!-- ### F A V I C O N   S T U F F -->
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" /><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" /><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" /><link rel="manifest" href="/site.webmanifest" /><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5" /><meta name="msapplication-TileColor" content="#2d89ef" /><meta name="theme-color" content="#ffffff" />
+
+        <!-- ### J Q U E R Y -->
+        <script type="text/javascript" language="javascript" src="/Scripts/jquery/jquery-3.6.0.min.js"></script>
+        <link rel="stylesheet" type="text/css" href="https://elections.il.gov/CSS/Fonts.css?refresh=24" /><link rel="stylesheet" type="text/css" href="https://elections.il.gov/CSS/Colors.css?refresh=24" /><link rel="stylesheet" type="text/css" href="https://elections.il.gov/CSS/Default.css?refresh=24" /><link rel="stylesheet" type="text/css" media="print" href="https://elections.il.gov/CSS/print.css?refresh=24" /><link rel="stylesheet" type="text/css" media="print" href="https://elections.il.gov/CSS/tabstyleprint.css?refresh=24" /><link href="/WebResource.axd?d=DSgCKnaJlQjfnXvLWZApACsCJhm7T1QWgKYQmpdExZHjmP90Tr3M1RVqewPNe0hrJzXSzLmLTxn92EhS1-kMuxS7zyJwsxtJDcAeCKO7N_YF1C3bfelLEidT00d-_cj8eltX8Q2&amp;t=638992379633132391" type="text/css" rel="stylesheet" /><link href="/WebResource.axd?d=hcXDZhXiidgsQUtEo5iT37pH9m_g-kughUrOrTn58FB3NzMq5IgzzKPygoomQm6PePxM1X8zQnGKM86YfTdxFfimRkU_i6RqFxW2sIPL3G38HrjuDxqhQAN3KNn4qPKivdmCrwR-HHTp6967hoJlg4UYUZE1&amp;t=638992379633132391" type="text/css" rel="stylesheet" /></head>
+
+    <body>
+
+        <form method="post" action="./B1List.aspx?ID=u%2f3lrJpX3cEOh0fPLsrqRw%3d%3d&amp;FiledDocID=u%2f3lrJpX3cEOh0fPLsrqRw%3d%3d&amp;ContributionType=wOGh3QTPfKqV2YWjeRmjTeStk426RfVK&amp;Archived=I0cuvBFuZRw%3d" id="form1">
+<div class="aspNetHidden">
+<input type="hidden" name="MenuTabContainer_ClientState" id="MenuTabContainer_ClientState" value="{&quot;ActiveTabIndex&quot;:0,&quot;TabEnabledState&quot;:[true,true,true,true,true,true,true],&quot;TabWasLoadedOnceState&quot;:[false,false,false,false,false,false,false]}" />
+<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="" />
+<input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="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" />
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+var theForm = document.forms['form1'];
+if (!theForm) {
+    theForm = document.form1;
+}
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
+    }
+}
+//]]>
+</script>
+
+
+<script src="/WebResource.axd?d=pynGkmcFUV13He1Qd6_TZN7L_AMWiq8d8SQxUG-4xCNZgiRYKSRt45lVeVNyI8s9-byhhA2&amp;t=638963505580933877" type="text/javascript"></script>
+
+
+<script src="../Scripts/WebForms/MsAjax/MicrosoftAjax.js" type="text/javascript"></script>
+<script src="../Scripts/WebForms/MsAjax/MicrosoftAjaxWebForms.js" type="text/javascript"></script>
+<script src="/ScriptResource.axd?d=eE6V8nDbUVn0gtG6hKNX_DEDu3sk1hVN0exGZHX2nVEydPcEuxFjXrHwKhjtEgnrIypDlb33-UZMBFq4KI-Sbeu2JWMkr-BuV3ei55Sr0aCbIF2F0&amp;t=17b84382" type="text/javascript"></script>
+<script src="/ScriptResource.axd?d=mcAASOSteirJeuV-3by3UQkZnH4mZiaMR16QqHc5gRV4ooU-Viy_91svB6zq11GaiEzQy6xTnP8Tw4-KzTLSxBO8uO01&amp;t=17b84382" type="text/javascript"></script>
+<script src="/ScriptResource.axd?d=jwf4VSQi7LeShc44FJ-gAXEQKkDDHs6FlEwGamixx7nNN-nMGkyQQkGBE8DFdccC0sBAoQDM9I2H0rc4A8JcT241SR3sK0DiVikp6zRXmv6NtAU40&amp;t=17b84382" type="text/javascript"></script>
+<script src="/ScriptResource.axd?d=HEFpVKbnoeQjkjHkFKu3MHbrgoCA879G9IBzcbHUgZmixBMzLbIonX4_r3_96X2bOlbqwctnhjrvtkw61A_fSzxfdK4irBS0gga74px6HlW6cGxK0&amp;t=17b84382" type="text/javascript"></script>
+<script src="/ScriptResource.axd?d=ItGmCSWFnDZZrlIg2XvePwDzpxgQqYUsriuLuRs6qFPpLhA7O6Ag-Q3P8Rlm9oFCx_av1cUSzQ20zCWJMBVyAv2tlag1&amp;t=17b84382" type="text/javascript"></script>
+<script src="/ScriptResource.axd?d=hOeJu0xhC-uW6Gf8ooKdXg0c7B1GgVk5RWnIP1QOERsJjb3KcTEuWrIYTU9X_Rvv-v47a0I0EVKwnBXg1qjYiS1tdnIMzlalMqlxzWgdDxkRjcyj0&amp;t=17b84382" type="text/javascript"></script>
+<div class="aspNetHidden">
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="C3187A23" />
+	<input type="hidden" name="__VIEWSTATEENCRYPTED" id="__VIEWSTATEENCRYPTED" value="" />
+	<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="HSVojKPWXvXI985gUnpImKT2+aTP2GyWkx5m0mO6HQRNgcW6YG4fol7GNFhzd/7DogcBhL99mVx7r2icxmRgbKD+fJgtehR9fFw+CTKHQIcXZEpQG1Ws7SAu2WD75NTHDjwZ3oOt+fjq6BZFCN5a17JT6v7DOKTYYdn1C7dVhBFOjKzmbldi82Yw/GI42ocQP2Qe8zV+LnrOq1OX1twaG04oC71c1buwpPC7gCwdMZyW+F70" />
+</div>
+
+            <a href="#content" rel="noopener noreferrer" class="skipnavigation">
+                Skip to Content
+            </a>
+
+            <div id="divDEBUG" style="position: absolute; top: 65px; left: 90px; width: 44%; padding: 0px; margin: 0px; vertical-align: top; z-index: 9999;"></div>
+
+            <script type="text/javascript">
+//<![CDATA[
+Sys.WebForms.PageRequestManager._initialize('ctl00$StylinScriptManager', 'form1', [], [], [], 90, 'ctl00');
+//]]>
+</script>
+
+
+            <div class="body-container">
+
+                <div id="divDebugDimensions" class="script-container" style="visibility: hidden;">
+                    <div>Width: <span id="scrWidth"></span></div>
+                    <div>Height: <span id="scrHeight"></span></div>
+                    <div>
+                        System Name:<br />
+                        <span id="lblSystemName">PSV-SBEWEB2</span>
+                    </div>
+                    <div>
+                        User Agent:<br />
+                        <span id="lblUserAgent"></span>
+                    </div>
+                </div>
+
+                <header>
+
+                    <div class="site-header">
+
+                        <button id="hamburger-menu" class="hamburger-menu hamburger-menu-open" type="button" aria-label="Menu"></button>
+
+                        <div class="site-header-right">
+
+                            <!-- @@@  M E N U   T O P -->
+                            <div class="site-header-right-title">
+
+                                <div class="title-text">
+                                    <a href="/Default.aspx" rel="noopener noreferrer">Illinois State Board of Elections
+                                    </a>
+                                </div>
+
+                                <!-- @@@  M E N U   S E A R C H -->
+                                <div id="pnlSiteSearchContainer" class="site-header-right-search-container">
+	
+
+                                    <span id="lblServerNumber">P2</span>
+
+                                    <div class="header-buttons">
+                                        <a href="/Default.aspx" rel="noopener noreferrer">Home</a>
+                                        <a id="hypPublicationsHeader" rel="noopener noreferrer" href="/Main/Publications.aspx">Publications</a>
+                                        <a id="hypFeedbackHeader" rel="noopener noreferrer" href="/Main/Feedback.aspx">Feedback</a>                
+                                    </div>
+
+                                    
+
+                                
+</div>
+
+                            </div>
+
+                            <!-- @@@  M E N U   M O B I L E -->
+                            
+
+                            <!-- @@@  M E N U   N A V I G A T I O N -->
+                            <nav class="site-header-right-menu site-header-right-menu-close">
+
+                                <!-- 10/19/2022 - JW - This is the new menu. -->
+                                <div class="main-menu-container">
+                                    <span id="lblNewMenu"><a href='/InformationForVoters.aspx?MID=I0cuvBFuZRw%3d' rel='noopener noreferrer'>Information For Voters</a><a href='/CampaignDisclosure.aspx?MID=rfZ%2buidMSDY%3d' rel='noopener noreferrer'>Campaign Disclosure</a><a href='/VotingSystems.aspx?MID=RDsPmNG6UtQ%3d' rel='noopener noreferrer'>Voting Systems</a><a href='/RunningForOffice.aspx?MID=rOlNCTNZd9A%3d' rel='noopener noreferrer'>Running for Office</a><a href='/CandidateFilingAndResults.aspx?MID=kvB0px3%2bckA%3d' rel='noopener noreferrer'>Candidate Filing and Results</a><a href='/BEREP.aspx?MID=5kJmo5Vlmig%3d' rel='noopener noreferrer'>Business Registration</a><a href='/PressRoom.aspx?MID=7gaOXOhipwU%3d' rel='noopener noreferrer'>Press Room</a><a href='/Forms.aspx?MID=F1cqdrOu5Po%3d' rel='noopener noreferrer'>Forms</a><a href='/AboutTheBoard.aspx?MID=cmHrvo7CZrE%3d' rel='noopener noreferrer'>About The Board</a></span>
+                                </div>
+
+                                
+
+                                <!-- ### B E G I N N I N G   O F   O L D   M E N U -->
+                                <div id="MenuTabContainer" class="HoverMenuPanelHeader hide" style="width:100%;visibility:hidden;">
+	<div id="MenuTabContainer_header" class="ajax__tab_header">
+		<span id="MenuTabContainer_MenuTabPanel0_tab" class="ajax__tab"><span class="ajax__tab_outer"><span class="ajax__tab_inner"><a class="ajax__tab_tab" id="__tab_MenuTabContainer_MenuTabPanel0" href="#" style="text-decoration:none;"><span>
+                                            <div id="MenuTabContainer_MenuTabPanel0_MenuTabPanelHeader0">Tab0</div>
+                                        </span></a></span></span></span><span id="MenuTabContainer_MenuTabPanel1_tab" class="ajax__tab"><span class="ajax__tab_outer"><span class="ajax__tab_inner"><a class="ajax__tab_tab" id="__tab_MenuTabContainer_MenuTabPanel1" href="#" style="text-decoration:none;"><span>
+                                            <div id="MenuTabContainer_MenuTabPanel1_MenuTabPanelHeader1">Tab1</div>
+                                        </span></a></span></span></span><span id="MenuTabContainer_MenuTabPanel2_tab" class="ajax__tab"><span class="ajax__tab_outer"><span class="ajax__tab_inner"><a class="ajax__tab_tab" id="__tab_MenuTabContainer_MenuTabPanel2" href="#" style="text-decoration:none;"><span>
+                                            <div id="MenuTabContainer_MenuTabPanel2_MenuTabPanelHeader2">Tab2</div>
+                                        </span></a></span></span></span><span id="MenuTabContainer_MenuTabPanel3_tab" class="ajax__tab"><span class="ajax__tab_outer"><span class="ajax__tab_inner"><a class="ajax__tab_tab" id="__tab_MenuTabContainer_MenuTabPanel3" href="#" style="text-decoration:none;"><span>
+                                            <div id="MenuTabContainer_MenuTabPanel3_MenuTabPanelHeader3">Tab3</div>
+                                        </span></a></span></span></span><span id="MenuTabContainer_MenuTabPanel4_tab" class="ajax__tab"><span class="ajax__tab_outer"><span class="ajax__tab_inner"><a class="ajax__tab_tab" id="__tab_MenuTabContainer_MenuTabPanel4" href="#" style="text-decoration:none;"><span>
+                                            <div id="MenuTabContainer_MenuTabPanel4_MenuTabPanelHeader4">Tab4</div>
+                                        </span></a></span></span></span><span id="MenuTabContainer_MenuTabPanel5_tab" class="ajax__tab"><span class="ajax__tab_outer"><span class="ajax__tab_inner"><a class="ajax__tab_tab" id="__tab_MenuTabContainer_MenuTabPanel5" href="#" style="text-decoration:none;"><span>
+                                            <div id="MenuTabContainer_MenuTabPanel5_MenuTabPanelHeader5">Tab5</div>
+                                        </span></a></span></span></span><span id="MenuTabContainer_MenuTabPanel6_tab" class="ajax__tab"><span class="ajax__tab_outer"><span class="ajax__tab_inner"><a class="ajax__tab_tab" id="__tab_MenuTabContainer_MenuTabPanel6" href="#" style="text-decoration:none;"><span>
+                                            <div id="MenuTabContainer_MenuTabPanel6_MenuTabPanelHeader6">Tab6</div>
+                                        </span></a></span></span></span>
+	</div><div id="MenuTabContainer_body" class="ajax__tab_body" style="display:block;">
+		<div id="MenuTabContainer_MenuTabPanel0" class="ajax__tab_panel">
+
+		</div><div id="MenuTabContainer_MenuTabPanel1" class="ajax__tab_panel" style="display:none;visibility:hidden;">
+
+		</div><div id="MenuTabContainer_MenuTabPanel2" class="ajax__tab_panel" style="display:none;visibility:hidden;">
+
+		</div><div id="MenuTabContainer_MenuTabPanel3" class="ajax__tab_panel" style="display:none;visibility:hidden;">
+
+		</div><div id="MenuTabContainer_MenuTabPanel4" class="ajax__tab_panel" style="display:none;visibility:hidden;">
+
+		</div><div id="MenuTabContainer_MenuTabPanel5" class="ajax__tab_panel" style="display:none;visibility:hidden;">
+
+		</div><div id="MenuTabContainer_MenuTabPanel6" class="ajax__tab_panel" style="display:none;visibility:hidden;">
+
+		</div>
+	</div>
+</div>
+                                <!-- ### E N D   O F   O L D   M E N U -->
+
+                            </nav>
+
+                        </div>
+
+                    </div>
+
+                </header>
+
+                
+
+                <!-- ### MAINTENANCE MESSAGE -->
+                
+
+                <!-- ###  C O N T E N T -->
+                <a id="content" tabindex="-1"></a>
+                <main class="content-container">
+                    
+
+    <div id="ContentPlaceHolder1_pageTitle" class="sbePageHeader">
+        B-1 List
+    </div>
+
+    <div class="infoContainers width-33">
+        <div class="infoContent text-Center">
+            <span id="ContentPlaceHolder1_lblName" class="subHeader">INCS Action Independent Committee</span>
+            <br />
+            <span id="ContentPlaceHolder1_lblReportPeriod">10/1/2024 to 12/31/2024<br/>       </span>
+        </div>
+    </div>
+
+    <br />
+
+    <div class="top-button-container">
+        <div class="left">
+            <a id="ContentPlaceHolder1_lnkDownloadList" class="floating-link" href="javascript:__doPostBack(&#39;ctl00$ContentPlaceHolder1$lnkDownloadList&#39;,&#39;&#39;)">Download This List</a>
+        </div>
+        <div class="right">
+            <a id="ContentPlaceHolder1_lnkPrintList" class="floating-link text-Center" rel="noopener noreferrer" href="CDPDFViewer.aspx?FiledDocID=u%2f3lrJpX3cEOh0fPLsrqRw%3d%3d&amp;DocType=YUgvF3HN37g%3d" target="_blank">Printable B-1</a>
+        </div>
+    </div>
+
+    
+    <div class="gridview-container">
+
+        <div>
+	<table class="SearchListTable" cellspacing="0" cellpadding="0" rules="all" border="1" id="ContentPlaceHolder1_gvB1List" style="width:100%;border-collapse:collapse;">
+		<tr class="SearchListTableHeaderRow">
+			<th class="GridViewSortHeaderAscending" scope="col"><a href="javascript:__doPostBack(&#39;ctl00$ContentPlaceHolder1$gvB1List&#39;,&#39;Sort$ReceivedBy&#39;)">Received By</a></th><th class="GridViewSortHeader" scope="col"><a href="javascript:__doPostBack(&#39;ctl00$ContentPlaceHolder1$gvB1List&#39;,&#39;Sort$Amount&#39;)">Amount</a></th><th class="GridViewSortHeader" scope="col"><a href="javascript:__doPostBack(&#39;ctl00$ContentPlaceHolder1$gvB1List&#39;,&#39;Sort$Purpose&#39;)">Purpose</a></th><th class="GridViewSortHeader" scope="col"><a href="javascript:__doPostBack(&#39;ctl00$ContentPlaceHolder1$gvB1List&#39;,&#39;Sort$SupportingOpposing&#39;)">Supporting/Opposing</a></th><th class="GridViewSortHeader" scope="col"><a href="javascript:__doPostBack(&#39;ctl00$ContentPlaceHolder1$gvB1List&#39;,&#39;Sort$CandidateName&#39;)">Candidate Name</a></th><th class="GridViewSortHeader" scope="col"><a href="javascript:__doPostBack(&#39;ctl00$ContentPlaceHolder1$gvB1List&#39;,&#39;Sort$OfficeDistrict&#39;)">Office - District</a></th>
+		</tr><tr>
+			<td align="center" valign="middle" style="width:20%;">THE BALDUZZI GROUP<br/>154 COBBLESTONE COURT DRIVE #133<br/>VICTOR, NY  14564     </td><td align="center" valign="middle" style="width:10%;">$24,632.00<br/>10/24/2024</td><td align="center" valign="middle" style="width:20%;">Mailing</td><td align="center" valign="middle" style="width:10%;">Supporting</td><td align="center" valign="middle" style="width:15%;">Eva Villalobos</td><td align="center" valign="middle" style="width:15%;">Chicago School Board, District 7</td>
+		</tr><tr class="SearchListTableRowAlternating">
+			<td align="center" valign="middle" style="width:20%;">THE BALDUZZI GROUP<br/>154 COBBLESTONE COURT DRIVE #133<br/>VICTOR, NY  14564     </td><td align="center" valign="middle" style="width:10%;">$30,956.00<br/>10/24/2024</td><td align="center" valign="middle" style="width:20%;">Mailing</td><td align="center" valign="middle" style="width:10%;">Supporting</td><td align="center" valign="middle" style="width:15%;">Angel Gutierrez</td><td align="center" valign="middle" style="width:15%;">Chicago School Board, District 8</td>
+		</tr><tr>
+			<td align="center" valign="middle" style="width:20%;">THE BALDUZZI GROUP<br/>154 COBBLESTONE COURT DRIVE #133<br/>VICTOR, NY  14564     </td><td align="center" valign="middle" style="width:10%;">$15,036.00<br/>10/24/2024</td><td align="center" valign="middle" style="width:20%;">Mailing</td><td align="center" valign="middle" style="width:10%;">Supporting</td><td align="center" valign="middle" style="width:15%;">Miquel Lewis</td><td align="center" valign="middle" style="width:15%;">Chicago School Board, District 9</td>
+		</tr><tr class="SearchListTableRowAlternating">
+			<td align="center" valign="middle" style="width:20%;">THE BALDUZZI GROUP<br/>154 COBBLESTONE COURT DRIVE #133<br/>VICTOR, NY  14564     </td><td align="center" valign="middle" style="width:10%;">$41,537.00<br/>10/24/2024</td><td align="center" valign="middle" style="width:20%;">Mailing</td><td align="center" valign="middle" style="width:10%;">Supporting</td><td align="center" valign="middle" style="width:15%;">Andre Smith</td><td align="center" valign="middle" style="width:15%;">Chicago School Board, District 6</td>
+		</tr>
+	</table>
+</div>
+
+    </div>
+
+
+
+                </main>
+
+                <!-- ###  F O O T E R -->
+                <footer id="divMasterPageFooter" class="footer">
+
+                    <div class="footer-container">
+
+                        <!-- ### L E F T -->
+                        <div class="footer-column">
+
+                            <div class="footer-address">
+
+                                <div class="footer-content">
+                                    <p>Springfield Office</p>
+
+                                    <div>
+                                        2329 S. MacArthur Blvd.
+                                                <br />
+                                        Springfield, IL 62704
+                                                <br />
+                                        Phone: 217-782-4141
+                                                <br />
+                                        Fax: 217-782-5959
+                                                <br />
+                                        TTY: 800-964-3013
+                                    </div>
+                                </div>
+
+                                <div class="footer-content">
+                                    <p>Chicago Office</p>
+
+                                    <div>
+                                        69 W. Washington Suite LL08
+                                                <br />
+                                        Chicago, IL 60602
+                                                <br />
+                                        Phone: 312-814-6440
+                                                <br />
+                                        Fax: 312-814-6485
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- ### C E N T E R -->
+                        <div class="footer-column">
+
+                            <div class="footer-content">
+
+                                <p>External Links</p>
+
+                                <nav>
+
+                                    <a id="hypIllinoisAmberAlert" rel="noopener noreferrer" href="http://www.amberillinois.org/" target="_blank">Illinois Amber Alert</a>
+                                        <br />
+                                    <a id="hypNationalCenterForMissingAndExploitedChildren" rel="noopener noreferrer" href="http://www.missingkids.org/home" target="_blank">National Center for Missing and Exploited Children</a>
+                                        <br />
+                                    <a id="hypIllinoisElectionStatutes" rel="noopener noreferrer" href="https://www.ilga.gov/legislation/ilcs/ilcs3.asp?ChapterID=3&amp;ActID=170" target="_blank">Illinois Election Statutes</a>
+                                        <br />
+                                    <a id="hypFederalElectionCommission" rel="noopener noreferrer" href="https://www.fec.gov/" target="_blank">Federal Election Commission</a>
+                                        <br />
+                                    <a id="hypStateOfIllinoisHomepage" rel="noopener noreferrer" href="https://www2.illinois.gov/" target="_blank">State of Illinois Homepage</a>
+                                        <br />
+                                    <a id="hypElectionAssistanceCommission" rel="noopener noreferrer" href="https://www.eac.gov/" target="_blank">Election Assistance Commission</a>
+
+                                </nav>
+
+                            </div>
+
+                        </div>
+
+                        <!-- ### R I G H T -->
+                        <div class="footer-column">
+
+                            <div class="footer-content">
+
+                                <nav>                            
+
+                                    <a id="hypContactUsFooter" rel="noopener noreferrer" href="/Main/ContactUs.aspx">Contact Us</a>
+
+                                    <br />
+                                
+                                    <a id="hypEmploymentOpportunitiesFooter" rel="noopener noreferrer" href="/AboutTheBoard/EmploymentOpportunities.aspx">Employment Opportunities</a>
+
+                                    <br />
+
+                                   <a id="hypFeedbackFooter" rel="noopener noreferrer" href="/Main/Feedback.aspx">Feedback</a>
+
+                                    <br />
+                               
+                                    <a id="hypPublicationsFooter" rel="noopener noreferrer" href="/Main/Publications.aspx">Publications</a>
+
+                                    <br />
+
+                                    <a id="hypGlossaryFooter" rel="noopener noreferrer" href="/Main/Glossary.aspx">Glossary</a>
+
+                                    <br />
+
+                                    <a id="hypFAQFooter" rel="noopener noreferrer" href="/Main/FAQ.aspx">Frequently Asked Questions</a>
+
+                                </nav>
+
+                                <nav class="footer-social">
+                                    <a id="hypFacebook" rel="noopener noreferrer" href="https://facebook.com/illinoissbe" target="_blank"><img src="/Images/Redesign/Social Media/social-facebook.png" alt="Facebook" /></a>
+                                        &nbsp;
+                                    <a id="hypTwitter" rel="noopener noreferrer" href="https://twitter.com/illinoissbe" target="_blank"><img src="/Images/Redesign/Social Media/social-twitter.png" alt="Twitter" /></a>
+                                        &nbsp;
+                                    <a id="hypYoutube" rel="noopener noreferrer" href="https://www.youtube.com/channel/UCtUHF1XFzIvPGmMOp0ohOCQ" target="_blank"><img src="/Images/Redesign/Social Media/social-youtube.png" alt="YouTube" /></a>
+                                </nav>
+
+                            </div>
+
+                        </div>
+
+                    </div> <!-- // F O O T E R - C O N T A I N E R -->
+                    
+
+                </footer> <!-- // F O O T E R -->
+                
+
+            </div> <!-- // B O D Y   C O N T A I N E R -->
+
+        
+
+<script type="text/javascript">
+//<![CDATA[
+var SBEIsMobileDevice = false;
+var SBEIsRobot = false;
+var SBEIsDEBUGMobile = false;
+function IsMobileUserAgent() {
+    var mobileWidth = 600;
+    var blnIsMobileUserAgent = SBEIsMobileDevice;
+    if ((!(SBEIsMobileDevice)) && (window.innerWidth != undefined)) {
+        blnIsMobileUserAgent = (window.innerWidth <= mobileWidth);
+    };
+    return blnIsMobileUserAgent;
+};Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TabPanel, {"headerTab":$get("__tab_MenuTabContainer_MenuTabPanel0"),"ownerID":"MenuTabContainer","wasLoadedOnce":false}, null, {"owner":"MenuTabContainer"}, $get("MenuTabContainer_MenuTabPanel0"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TabPanel, {"headerTab":$get("__tab_MenuTabContainer_MenuTabPanel1"),"ownerID":"MenuTabContainer","wasLoadedOnce":false}, null, {"owner":"MenuTabContainer"}, $get("MenuTabContainer_MenuTabPanel1"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TabPanel, {"headerTab":$get("__tab_MenuTabContainer_MenuTabPanel2"),"ownerID":"MenuTabContainer","wasLoadedOnce":false}, null, {"owner":"MenuTabContainer"}, $get("MenuTabContainer_MenuTabPanel2"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TabPanel, {"headerTab":$get("__tab_MenuTabContainer_MenuTabPanel3"),"ownerID":"MenuTabContainer","wasLoadedOnce":false}, null, {"owner":"MenuTabContainer"}, $get("MenuTabContainer_MenuTabPanel3"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TabPanel, {"headerTab":$get("__tab_MenuTabContainer_MenuTabPanel4"),"ownerID":"MenuTabContainer","wasLoadedOnce":false}, null, {"owner":"MenuTabContainer"}, $get("MenuTabContainer_MenuTabPanel4"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TabPanel, {"headerTab":$get("__tab_MenuTabContainer_MenuTabPanel5"),"ownerID":"MenuTabContainer","wasLoadedOnce":false}, null, {"owner":"MenuTabContainer"}, $get("MenuTabContainer_MenuTabPanel5"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TabPanel, {"headerTab":$get("__tab_MenuTabContainer_MenuTabPanel6"),"ownerID":"MenuTabContainer","wasLoadedOnce":false}, null, {"owner":"MenuTabContainer"}, $get("MenuTabContainer_MenuTabPanel6"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.TabContainer, {"activeTabIndex":0,"clientStateField":$get("MenuTabContainer_ClientState"),"onDemand":false,"tabStripPlacement":0,"useVerticalStripPlacement":false}, null, null, $get("MenuTabContainer"));
+});
+//]]>
+</script>
+</form>
+
+        <script type="text/javascript" src="/Scripts/MasterPage.js" defer></script>
+
+    <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a09258c51d991143',t:'MTc4MTAzMTI4Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+
+</html>

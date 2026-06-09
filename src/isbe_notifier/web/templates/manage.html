@@ -13,6 +13,12 @@
     {% endfor %}
   </div>
 
+  <h3>Everything</h3>
+  <label class="race firehose">
+    <input type="checkbox" id="all-filings" {% if all_filings %}checked{% endif %}>
+    <strong>The firehose</strong> — every report filed statewide (high volume)
+  </label>
+
   <h3>Committees you follow</h3>
   <div class="committee-search">
     <input type="search" id="committee-q" placeholder="Search by committee name or ID…"

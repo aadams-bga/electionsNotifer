@@ -229,3 +229,25 @@ def test_race_committee_whitelist_matches_any_report_type(session, fake_fetch, s
     assert poller.notify_filing(session, filing) == 1
     _, subject, _ = sent_emails[0]
     assert "Statement of Organization" in subject
+
+
+def test_firehose_matches_every_filing(session, fake_fetch, sent_emails):
+    hose = Subscriber(email="hose@example.org", email_verified_at=datetime.now(UTC))
+    session.add(hose)
+    session.flush()
+    session.add(Subscription(subscriber_id=hose.id, all_filings=True, wants_email=True))
+
+    # A letter from a committee nobody follows, with no scrapeable page
+    feed_item = FeedItem(
+        guid_seq=6, committee_name="Some Random Committee",
+        report_type="Letter / Correspondence", source="Filed on paper",
+        url=None, guid_url="https://elections.il.gov/pdf2", pub_date=datetime.now(UTC),
+    )
+    session.add(feed_item)
+    session.flush()
+    filing = poller.process_feed_item(session, None, feed_item)
+    assert filing.report_class == "OTHER"
+    assert poller.notify_filing(session, filing) == 1
+    to, subject, _ = sent_emails[0]
+    assert to == "hose@example.org"
+    assert "Some Random Committee" in subject

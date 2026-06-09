@@ -172,3 +172,14 @@ def test_committee_search(client):
 
 def test_admin_requires_token(client):
     assert client.get("/admin").status_code == 404
+
+
+def test_firehose_signup(client):
+    resp = client.post("/api/subscribe", json={
+        "email": "hose@example.org", "wants_email": True, "all_filings": True,
+    })
+    assert resp.status_code == 200
+    with db.session_scope() as s:
+        sub = s.scalars(select(Subscription)).one()
+        assert sub.all_filings is True
+        assert sub.race_id is None and sub.committee_id is None

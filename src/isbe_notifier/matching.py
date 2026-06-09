@@ -63,13 +63,12 @@ def recipients_for(session: Session, filing: Filing) -> list[MatchedRecipient]:
     """
     race_ids = matched_race_ids(session, filing)
 
-    clauses = []
+    # Firehose subscriptions match every filing.
+    clauses = [Subscription.all_filings.is_(True)]
     if filing.committee_id is not None:
         clauses.append(Subscription.committee_id == filing.committee_id)
     if race_ids:
         clauses.append(Subscription.race_id.in_(race_ids))
-    if not clauses:
-        return []
 
     query = (
         select(Subscription)

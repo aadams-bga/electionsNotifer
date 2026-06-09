@@ -112,6 +112,7 @@
     const wantsEmail = document.getElementById("wants-email").checked;
     const wantsPush = document.getElementById("wants-push").checked;
     const emailInput = document.getElementById("email");
+    const allFilings = document.getElementById("all-filings");
     const payload = {
       email: emailInput && emailInput.value ? emailInput.value : null,
       wants_email: wantsEmail,
@@ -119,6 +120,7 @@
       race_slugs: Array.from(form.querySelectorAll('input[name="race"]:checked'))
         .map((el) => el.value),
       committee_ids: chosenIds(),
+      all_filings: !!(allFilings && allFilings.checked),
     };
 
     try {

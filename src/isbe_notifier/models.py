@@ -159,6 +159,8 @@ class Subscription(Base):
     subscriber_id: Mapped[int] = mapped_column(ForeignKey("subscribers.id"), index=True)
     race_id: Mapped[int | None] = mapped_column(ForeignKey("races.id"), index=True)
     committee_id: Mapped[int | None] = mapped_column(ForeignKey("committees.id"), index=True)
+    # Firehose: every filing statewide, regardless of race/committee.
+    all_filings: Mapped[bool] = mapped_column(Boolean, default=False)
     wants_email: Mapped[bool] = mapped_column(Boolean, default=True)
     wants_push: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

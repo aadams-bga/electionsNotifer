@@ -95,6 +95,7 @@ class SubscribeRequest(BaseModel):
     wants_push: bool = False
     race_slugs: list[str] = Field(default_factory=list, max_length=50)
     committee_ids: list[int] = Field(default_factory=list, max_length=100)
+    all_filings: bool = False
 
 
 @app.post("/api/subscribe")
@@ -104,7 +105,7 @@ def subscribe(request: Request, payload: SubscribeRequest):
         raise HTTPException(400, "Email address required for email notifications.")
     if not payload.wants_email and not payload.wants_push:
         raise HTTPException(400, "Choose email notifications, push notifications, or both.")
-    if not payload.race_slugs and not payload.committee_ids:
+    if not payload.race_slugs and not payload.committee_ids and not payload.all_filings:
         raise HTTPException(400, "Choose at least one race or committee to follow.")
 
     with session_scope() as session:
@@ -153,6 +154,14 @@ def subscribe(request: Request, payload: SubscribeRequest):
             sub = existing.get(key) or Subscription(
                 subscriber_id=subscriber.id, committee_id=committee.id
             )
+            sub.wants_email = sub.wants_email or payload.wants_email
+            sub.wants_push = sub.wants_push or payload.wants_push
+            session.add(sub)
+        if payload.all_filings:
+            sub = existing.get((None, None)) or Subscription(
+                subscriber_id=subscriber.id, all_filings=True
+            )
+            sub.all_filings = True
             sub.wants_email = sub.wants_email or payload.wants_email
             sub.wants_push = sub.wants_push or payload.wants_push
             session.add(sub)
@@ -226,6 +235,7 @@ def manage(request: Request, token: str):
                 "races": races,
                 "selected_race_slugs": {s.race.slug for s in subs if s.race},
                 "followed_committees": followed_committees,
+                "all_filings": any(s.all_filings for s in subs),
                 "wants_email": any(s.wants_email for s in subs),
                 "wants_push": any(s.wants_push for s in subs),
                 "vapid_public_key": get_settings().vapid_public_key,
@@ -251,6 +261,15 @@ def update_subscriptions(request: Request, payload: ManageRequest):
         for sub in list(subscriber.subscriptions):
             session.delete(sub)
         session.flush()
+        if payload.all_filings:
+            session.add(
+                Subscription(
+                    subscriber_id=subscriber.id,
+                    all_filings=True,
+                    wants_email=payload.wants_email,
+                    wants_push=payload.wants_push,
+                )
+            )
         for race in races:
             session.add(
                 Subscription(

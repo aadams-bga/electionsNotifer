@@ -113,6 +113,9 @@
     const wantsPush = document.getElementById("wants-push").checked;
     const emailInput = document.getElementById("email");
     const allFilings = document.getElementById("all-filings");
+    const allCps = document.getElementById("all-cps");
+    const dailyDigest = document.getElementById("daily-digest");
+    const weeklyDigest = document.getElementById("weekly-digest");
     const payload = {
       email: emailInput && emailInput.value ? emailInput.value : null,
       wants_email: wantsEmail,
@@ -121,6 +124,9 @@
         .map((el) => el.value),
       committee_ids: chosenIds(),
       all_filings: !!(allFilings && allFilings.checked),
+      all_cps: !!(allCps && allCps.checked),
+      wants_daily_digest: !!(dailyDigest && dailyDigest.checked),
+      wants_weekly_digest: !!(weeklyDigest && weeklyDigest.checked),
     };
 
     try {

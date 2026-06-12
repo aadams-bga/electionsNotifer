@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h2>Follow the money in Illinois elections</h2>
+  <p>This is a free notification service that watches the Illinois State Board of
+     Elections' public feed around the clock. The moment a campaign committee reports
+     a major contribution, an independent expenditure, or any other disclosure, we
+     send an alert by email or push notification — with every contribution and
+     expenditure itemized.</p>
+  <p>It was built for the <strong>2026 Chicago Public Schools Board races</strong>
+     (the citywide president's seat and all 20 district seats), but you can also
+     follow any Illinois committee — or every filing statewide.</p>
+  <p class="cta-row">
+    <a class="btn" href="/subscribe">Sign up for alerts</a>
+    <a class="btn btn-secondary" href="/login" data-manage-link>Manage my alerts</a>
+  </p>
+</section>
+
+<section>
+  <h2>Today's reports</h2>
+  <p class="scope-toggle">
+    {% if scope == "cps" %}
+      <strong>CPS Board races ({{ cps_count }})</strong> ·
+      <a href="/?scope=all">All statewide ({{ total_count }}{% if capped %}+{% endif %})</a>
+    {% else %}
+      <a href="/">CPS Board races ({{ cps_count }})</a> ·
+      <strong>All statewide ({{ total_count }}{% if capped %}+{% endif %})</strong>
+    {% endif %}
+  </p>
+
+  {% if rows %}
+  <table class="filings">
+    <thead>
+      <tr><th>Time</th><th>Committee</th><th>Report</th>{% if scope == "cps" or cps_count %}<th>Race</th>{% endif %}</tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td class="nowrap">{{ row.time }}</td>
+        <td>{{ row.committee_name }}</td>
+        <td><a href="{{ row.url }}" rel="noopener">{{ row.report_type }}</a></td>
+        {% if scope == "cps" or cps_count %}
+        <td>{{ row.race_labels | join(", ") }}</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if capped %}
+  <p class="hint">Showing the {{ rows | length }} most recent — see
+     <a href="https://elections.il.gov">elections.il.gov</a> for the full day.</p>
+  {% endif %}
+  {% else %}
+  <p class="hint">
+    {% if scope == "cps" %}No reports tied to a CPS Board race yet today.
+      <a href="/?scope=all">See all of today's statewide filings ({{ total_count }})</a>.
+    {% else %}No reports filed yet today.{% endif %}
+  </p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>How it works</h2>
+  <ul>
+    <li><strong>Real-time alerts</strong> — email and/or push notifications minutes
+        after a report appears, including every itemized contribution and expenditure.</li>
+    <li><strong>Daily &amp; weekly summaries</strong> — optional digest emails that
+        collect everything you follow in one message.</li>
+    <li><strong>Race matching</strong> — independent expenditures are matched to CPS
+        races by the "Office – District" they target, no matter which committee
+        spends the money.</li>
+  </ul>
+  <p>Every alert links back to the original report on
+     <a href="https://elections.il.gov">elections.il.gov</a>. Unsubscribe anytime,
+     from any email.</p>
+</section>
+{% endblock %}

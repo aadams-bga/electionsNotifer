@@ -69,6 +69,9 @@ def recipients_for(session: Session, filing: Filing) -> list[MatchedRecipient]:
         clauses.append(Subscription.committee_id == filing.committee_id)
     if race_ids:
         clauses.append(Subscription.race_id.in_(race_ids))
+        # Every race in the races table is a CPS race, so any race match
+        # also satisfies "all CPS races" subscriptions.
+        clauses.append(Subscription.all_cps.is_(True))
 
     query = (
         select(Subscription)

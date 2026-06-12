@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <h2>Manage your alerts</h2>
+  <p>Enter the email address you subscribed with and we'll send you a sign-in link
+     to your preferences.</p>
+  <form method="post" action="/login">
+    <input type="email" name="email" placeholder="you@example.com"
+           autocomplete="email" required>
+    <button type="submit">Email me a sign-in link</button>
+  </form>
+  <p class="hint">Subscribed with push notifications only (no email)? Open this page in
+     the browser you signed up with and use the "Manage my alerts" button on the
+     home screen — your device remembers your subscription.</p>
+</section>
+{% endblock %}

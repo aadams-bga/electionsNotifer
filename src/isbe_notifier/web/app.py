@@ -1,6 +1,8 @@
 import logging
 from datetime import UTC, datetime, timedelta
+from datetime import time as dtime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -17,6 +19,8 @@ from ..db import session_scope
 from ..models import (
     Committee,
     FeedItem,
+    Filing,
+    FilingRace,
     PollerState,
     PushSubscription,
     Race,
@@ -26,6 +30,9 @@ from ..models import (
 )
 from ..notify import tokens
 from ..notify.emailer import send_email
+
+CENTRAL = ZoneInfo("America/Chicago")
+TODAY_LIST_CAP = 500
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -60,20 +67,131 @@ def _races(session) -> list[Race]:
     return list(session.scalars(select(Race).order_by(Race.sort_order)))
 
 
+def _todays_filing_rows(session, scope: str) -> tuple[list[dict], int, int]:
+    """Today's (Central time) feed items, newest first, with CPS race labels.
+
+    Returns (rows for the requested scope, statewide count, CPS count)."""
+    today_ct = datetime.now(CENTRAL).date()
+    lo = datetime.combine(today_ct, dtime.min, tzinfo=CENTRAL).astimezone(UTC)
+    hi = lo + timedelta(days=1)
+    items = session.scalars(
+        select(FeedItem)
+        .where(FeedItem.pub_date >= lo, FeedItem.pub_date < hi)
+        .order_by(FeedItem.pub_date.desc())
+        .limit(TODAY_LIST_CAP)
+    ).all()
+
+    filings = {}
+    labels: dict[int, list[str]] = {}
+    if items:
+        filings = {
+            f.feed_item_seq: f
+            for f in session.scalars(
+                select(Filing).where(Filing.feed_item_seq.in_([i.guid_seq for i in items]))
+            )
+        }
+        if filings:
+            for filing_id, label in session.execute(
+                select(FilingRace.filing_id, Race.label)
+                .join(Race, Race.id == FilingRace.race_id)
+                .where(FilingRace.filing_id.in_([f.id for f in filings.values()]))
+                .order_by(Race.sort_order)
+            ):
+                labels.setdefault(filing_id, []).append(label)
+
+    rows, cps_count = [], 0
+    for item in items:
+        filing = filings.get(item.guid_seq)
+        race_labels = labels.get(filing.id, []) if filing else []
+        if race_labels:
+            cps_count += 1
+        elif scope != "all":
+            continue
+        pub = item.pub_date
+        if pub is not None and pub.tzinfo is None:  # SQLite in tests returns naive UTC
+            pub = pub.replace(tzinfo=UTC)
+        rows.append(
+            {
+                "time": pub.astimezone(CENTRAL).strftime("%-I:%M %p") if pub else "",
+                "committee_name": item.committee_name,
+                "report_type": item.report_type,
+                "url": item.url or item.guid_url,
+                "race_labels": race_labels,
+            }
+        )
+    return rows, len(items), cps_count
+
+
 @app.get("/", response_class=HTMLResponse)
-def index(request: Request):
+def landing(request: Request, scope: str = "cps"):
+    settings = get_settings()
+    scope = "all" if scope == "all" else "cps"
+    with session_scope() as session:
+        rows, total_count, cps_count = _todays_filing_rows(session, scope)
+        return templates.TemplateResponse(
+            request,
+            "landing.html",
+            {
+                "site_name": settings.site_name,
+                "scope": scope,
+                "rows": rows,
+                "total_count": total_count,
+                "cps_count": cps_count,
+                "capped": total_count >= TODAY_LIST_CAP,
+            },
+        )
+
+
+@app.get("/subscribe", response_class=HTMLResponse)
+def subscribe_page(request: Request):
     settings = get_settings()
     with session_scope() as session:
         races = _races(session)
         return templates.TemplateResponse(
             request,
-            "index.html",
+            "subscribe.html",
             {
                 "races": races,
                 "site_name": settings.site_name,
                 "vapid_public_key": settings.vapid_public_key,
             },
         )
+
+
+@app.get("/login", response_class=HTMLResponse)
+def login_page(request: Request):
+    return templates.TemplateResponse(
+        request, "login.html", {"site_name": get_settings().site_name}
+    )
+
+
+@app.post("/login", response_class=HTMLResponse)
+@limiter.limit("5/hour")
+async def login_submit(request: Request):
+    form = await request.form()
+    email = str(form.get("email", "")).strip().lower()
+    if email and "@" in email:
+        with session_scope() as session:
+            subscriber = session.scalars(
+                select(Subscriber).where(Subscriber.email == email)
+            ).first()
+            if subscriber is not None:
+                send_email(
+                    email,
+                    f"Your {get_settings().site_name} sign-in link",
+                    "Use the link below to open your alert preferences. "
+                    "It works for 90 days.\n\n"
+                    f"{tokens.manage_url(subscriber.id)}\n\n"
+                    "If you didn't request this, you can ignore this email.",
+                    None,
+                    subscriber.id,
+                )
+    # Same response whether or not the address is subscribed (no enumeration).
+    return _message(
+        request,
+        "If that address has a subscription, we've emailed it a sign-in link. "
+        "Check your inbox.",
+    )
 
 
 @app.get("/healthz")
@@ -96,6 +214,9 @@ class SubscribeRequest(BaseModel):
     race_slugs: list[str] = Field(default_factory=list, max_length=50)
     committee_ids: list[int] = Field(default_factory=list, max_length=100)
     all_filings: bool = False
+    all_cps: bool = False
+    wants_daily_digest: bool = False
+    wants_weekly_digest: bool = False
 
 
 @app.post("/api/subscribe")
@@ -103,9 +224,13 @@ class SubscribeRequest(BaseModel):
 def subscribe(request: Request, payload: SubscribeRequest):
     if payload.wants_email and not payload.email:
         raise HTTPException(400, "Email address required for email notifications.")
+    if (payload.wants_daily_digest or payload.wants_weekly_digest) and not payload.email:
+        raise HTTPException(400, "Email address required for summary emails.")
     if not payload.wants_email and not payload.wants_push:
         raise HTTPException(400, "Choose email notifications, push notifications, or both.")
-    if not payload.race_slugs and not payload.committee_ids and not payload.all_filings:
+    if not (
+        payload.race_slugs or payload.committee_ids or payload.all_filings or payload.all_cps
+    ):
         raise HTTPException(400, "Choose at least one race or committee to follow.")
 
     with session_scope() as session:
@@ -157,14 +282,21 @@ def subscribe(request: Request, payload: SubscribeRequest):
             sub.wants_email = sub.wants_email or payload.wants_email
             sub.wants_push = sub.wants_push or payload.wants_push
             session.add(sub)
-        if payload.all_filings:
-            sub = existing.get((None, None)) or Subscription(
-                subscriber_id=subscriber.id, all_filings=True
-            )
-            sub.all_filings = True
+        if payload.all_filings or payload.all_cps:
+            # Single "flags row" (race_id and committee_id both NULL) carries both.
+            sub = existing.get((None, None)) or Subscription(subscriber_id=subscriber.id)
+            sub.all_filings = sub.all_filings or payload.all_filings
+            sub.all_cps = sub.all_cps or payload.all_cps
             sub.wants_email = sub.wants_email or payload.wants_email
             sub.wants_push = sub.wants_push or payload.wants_push
             session.add(sub)
+        if payload.email:
+            subscriber.wants_daily_digest = (
+                subscriber.wants_daily_digest or payload.wants_daily_digest
+            )
+            subscriber.wants_weekly_digest = (
+                subscriber.wants_weekly_digest or payload.wants_weekly_digest
+            )
 
         subscriber_id = subscriber.id
         if needs_verification:
@@ -236,6 +368,9 @@ def manage(request: Request, token: str):
                 "selected_race_slugs": {s.race.slug for s in subs if s.race},
                 "followed_committees": followed_committees,
                 "all_filings": any(s.all_filings for s in subs),
+                "all_cps": any(s.all_cps for s in subs),
+                "wants_daily_digest": subscriber.wants_daily_digest,
+                "wants_weekly_digest": subscriber.wants_weekly_digest,
                 "wants_email": any(s.wants_email for s in subs),
                 "wants_push": any(s.wants_push for s in subs),
                 "vapid_public_key": get_settings().vapid_public_key,
@@ -261,15 +396,18 @@ def update_subscriptions(request: Request, payload: ManageRequest):
         for sub in list(subscriber.subscriptions):
             session.delete(sub)
         session.flush()
-        if payload.all_filings:
+        if payload.all_filings or payload.all_cps:
             session.add(
                 Subscription(
                     subscriber_id=subscriber.id,
-                    all_filings=True,
+                    all_filings=payload.all_filings,
+                    all_cps=payload.all_cps,
                     wants_email=payload.wants_email,
                     wants_push=payload.wants_push,
                 )
             )
+        subscriber.wants_daily_digest = bool(subscriber.email and payload.wants_daily_digest)
+        subscriber.wants_weekly_digest = bool(subscriber.email and payload.wants_weekly_digest)
         for race in races:
             session.add(
                 Subscription(

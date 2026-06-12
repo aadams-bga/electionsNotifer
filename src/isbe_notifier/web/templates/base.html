@@ -14,6 +14,11 @@
   <header>
     <h1>{{ site_name }}</h1>
     <p class="tagline">Real-time alerts when Illinois campaign finance reports are filed</p>
+    <nav>
+      <a href="/">Today's filings</a>
+      <a href="/subscribe">Sign up</a>
+      <a href="/login" data-manage-link>Manage alerts</a>
+    </nav>
   </header>
   <main>
     {% block content %}{% endblock %}
@@ -22,6 +27,7 @@
     <p>Data source: <a href="https://elections.il.gov">Illinois State Board of Elections</a>.
        Alerts are sent as reports appear in the state's public feed.</p>
   </footer>
+  <script src="/static/nav.js"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

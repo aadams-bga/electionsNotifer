@@ -4,6 +4,11 @@
   <h2>Manage your alerts{% if email %} — {{ email }}{% endif %}</h2>
 
   <h3>CPS Board races</h3>
+  <label class="race all-cps">
+    <input type="checkbox" id="all-cps" {% if all_cps %}checked{% endif %}>
+    <strong>All CPS Board races</strong> — the president's race and every district,
+    including any added later
+  </label>
   <div class="race-grid">
     {% for race in races %}
     <label class="race">
@@ -40,6 +45,20 @@
     <input type="checkbox" id="wants-push" {% if wants_push %}checked{% endif %}>
     Push notifications on this device
   </label>
+
+  <h3>Summary emails</h3>
+  <label class="channel">
+    <input type="checkbox" id="daily-digest" {% if wants_daily_digest %}checked{% endif %}
+           {% if not email %}disabled{% endif %}> Daily summary — everything you follow,
+    one email each morning
+  </label>
+  <label class="channel">
+    <input type="checkbox" id="weekly-digest" {% if wants_weekly_digest %}checked{% endif %}
+           {% if not email %}disabled{% endif %}> Weekly summary — the same, every Monday
+  </label>
+  {% if not email %}
+  <p class="hint">Summary emails require an email address on your subscription.</p>
+  {% endif %}
 
   <button type="submit">Save changes</button>
   <p id="form-status" role="status"></p>

@@ -4,6 +4,10 @@
   <section>
     <h2>1. Pick what to follow</h2>
     <h3>Chicago Public Schools Board races (2026)</h3>
+    <label class="race all-cps">
+      <input type="checkbox" id="all-cps"> <strong>All CPS Board races</strong> —
+      the president's race and every district, including any added later
+    </label>
     <div class="race-grid">
       {% for race in races %}
       <label class="race">
@@ -40,6 +44,16 @@
     </label>
     <p class="hint" id="ios-hint" hidden>On iPhone/iPad: first tap Share → “Add to Home
       Screen,” then open the app to enable push notifications.</p>
+
+    <h3>Summary emails (optional)</h3>
+    <label class="channel">
+      <input type="checkbox" id="daily-digest"> Daily summary — everything you follow,
+      one email each morning
+    </label>
+    <label class="channel">
+      <input type="checkbox" id="weekly-digest"> Weekly summary — the same, every Monday
+    </label>
+    <p class="hint">Summaries require an email address. Real-time alerts are unaffected.</p>
   </section>
 
   <button type="submit" id="submit-btn">Sign up for alerts</button>

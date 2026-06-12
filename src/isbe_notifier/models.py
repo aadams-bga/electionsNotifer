@@ -103,6 +103,23 @@ class FilingLine(Base):
     filing: Mapped[Filing] = relationship(back_populates="lines")
 
 
+class FilingRace(Base):
+    """A filing matched to a race (whitelist committee or B-1 office-district match).
+
+    Written when the filing is processed; powers the landing-page today list and
+    digest queries without re-running the matching logic.
+    """
+
+    __tablename__ = "filing_races"
+    __table_args__ = (UniqueConstraint("filing_id", "race_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    filing_id: Mapped[int] = mapped_column(ForeignKey("filings.id"), index=True)
+    race_id: Mapped[int] = mapped_column(ForeignKey("races.id"), index=True)
+
+    race: Mapped["Race"] = relationship()
+
+
 class Race(Base):
     """A subscribable race, e.g. CPS Board President or District 4a."""
 
@@ -137,6 +154,9 @@ class Subscriber(Base):
     # Nullable: push-only subscribers have no email address.
     email: Mapped[str | None] = mapped_column(String(320), unique=True, index=True)
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Opt-in summary emails (require a verified email; real-time alerts unaffected).
+    wants_daily_digest: Mapped[bool] = mapped_column(Boolean, default=False)
+    wants_weekly_digest: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     subscriptions: Mapped[list["Subscription"]] = relationship(
@@ -161,6 +181,10 @@ class Subscription(Base):
     committee_id: Mapped[int | None] = mapped_column(ForeignKey("committees.id"), index=True)
     # Firehose: every filing statewide, regardless of race/committee.
     all_filings: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Every CPS Board race (current and future) without picking them individually.
+    # Shares the race_id/committee_id-NULL "flags row" with all_filings because of
+    # the uq_sub_target constraint.
+    all_cps: Mapped[bool] = mapped_column(Boolean, default=False)
     wants_email: Mapped[bool] = mapped_column(Boolean, default=True)
     wants_push: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -197,6 +221,25 @@ class Notification(Base):
     subscriber_id: Mapped[int] = mapped_column(ForeignKey("subscribers.id"), index=True)
     filing_id: Mapped[int] = mapped_column(ForeignKey("filings.id"), index=True)
     channel: Mapped[str] = mapped_column(String(20))  # email | push
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending|sent|failed
+    detail: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class DigestSend(Base):
+    """Idempotency guard + audit for digest emails: one row per
+    (subscriber, kind, period_start)."""
+
+    __tablename__ = "digest_sends"
+    __table_args__ = (
+        UniqueConstraint("subscriber_id", "kind", "period_start", name="uq_digest_once"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    subscriber_id: Mapped[int] = mapped_column(ForeignKey("subscribers.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(10))  # daily | weekly
+    period_start: Mapped[date] = mapped_column(Date)
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending|sent|failed
     detail: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

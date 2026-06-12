@@ -30,6 +30,38 @@ def _date(d) -> str:
     return d.strftime("%-m/%-d/%Y") if d else "(date unavailable)"
 
 
+def filing_total(filing: Filing):
+    return sum((ln.amount for ln in filing.lines if ln.amount is not None), start=0)
+
+
+def line_rows(filing: Filing) -> list[str]:
+    """One bullet per contribution/expenditure line; shared with digest emails.
+
+    Dates are omitted when absent (the B-1 full-list CSV carries no dates)."""
+    rows = []
+    if filing.report_class == "A1":
+        for ln in filing.lines:
+            row = f"  • {ln.name} — {_money(ln.amount)}"
+            if ln.line_date:
+                row += f" received {_date(ln.line_date)}"
+            if ln.description:
+                row += f" ({ln.description})"
+            rows.append(row)
+    elif filing.report_class == "B1":
+        for ln in filing.lines:
+            parts = [f"  • {_money(ln.amount)} to {ln.vendor_name}"]
+            if ln.line_date:
+                parts[0] += f" on {_date(ln.line_date)}"
+            if ln.purpose:
+                parts.append(f"purpose: {ln.purpose}")
+            if ln.supporting_opposing and ln.candidate_name:
+                parts.append(f"{ln.supporting_opposing.lower()} {ln.candidate_name}")
+            if ln.office_district:
+                parts.append(f"({ln.office_district})")
+            rows.append(" — ".join(parts))
+    return rows
+
+
 def build_content(filing: Filing) -> NotificationContent:
     feed_item = filing.feed_item
     committee = filing.committee.name if filing.committee else feed_item.committee_name
@@ -38,12 +70,8 @@ def build_content(filing: Filing) -> NotificationContent:
     amendment = " (amendment)" if filing.is_amendment else ""
 
     if filing.report_class == "A1" and filing.lines:
-        total = sum((ln.amount for ln in filing.lines if ln.amount is not None), start=0)
-        rows = [
-            f"  • {ln.name} — {_money(ln.amount)} received {_date(ln.line_date)}"
-            + (f" ({ln.description})" if ln.description else "")
-            for ln in filing.lines
-        ]
+        total = filing_total(filing)
+        rows = line_rows(filing)
         n = len(filing.lines)
         subject = f"{committee} reported {_money(total)} in major contributions"
         body = (
@@ -57,17 +85,8 @@ def build_content(filing: Filing) -> NotificationContent:
         return NotificationContent(subject, body, f"A-1: {committee}", push_body, url)
 
     if filing.report_class == "B1" and filing.lines:
-        total = sum((ln.amount for ln in filing.lines if ln.amount is not None), start=0)
-        rows = []
-        for ln in filing.lines:
-            parts = [f"  • {_money(ln.amount)} to {ln.vendor_name} on {_date(ln.line_date)}"]
-            if ln.purpose:
-                parts.append(f"purpose: {ln.purpose}")
-            if ln.supporting_opposing and ln.candidate_name:
-                parts.append(f"{ln.supporting_opposing.lower()} {ln.candidate_name}")
-            if ln.office_district:
-                parts.append(f"({ln.office_district})")
-            rows.append(" — ".join(parts))
+        total = filing_total(filing)
+        rows = line_rows(filing)
         n = len(filing.lines)
         subject = f"{committee} reported {_money(total)} in independent expenditures"
         body = (

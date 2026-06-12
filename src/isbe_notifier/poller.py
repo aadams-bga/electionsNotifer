@@ -4,6 +4,7 @@ resolve committee → match subscriptions → send notifications.
 Run with: python -m isbe_notifier.poller
 """
 
+import datetime as dt
 import logging
 import time
 
@@ -14,12 +15,13 @@ from sqlalchemy.orm import Session
 
 from .config import get_settings
 from .db import session_scope
-from .matching import recipients_for
+from .matching import matched_race_ids, recipients_for
 from .models import (
     Committee,
     FeedItem,
     Filing,
     FilingLine,
+    FilingRace,
     Notification,
     PollerState,
     PushSubscription,
@@ -28,7 +30,7 @@ from .models import (
 from .notify.content import build_content
 from .notify.emailer import send_email
 from .notify.push import PushGone, send_push
-from .scraper import pages, rss
+from .scraper import download, pages, rss
 from .scraper.client import fetch, make_client
 
 logger = logging.getLogger(__name__)
@@ -120,14 +122,31 @@ def process_feed_item(session: Session, client: httpx.Client, feed_item: FeedIte
         time.sleep(FETCH_PAUSE_SECONDS)
         html = fetch(client, feed_item.url).text
         page = pages.parse_a1_list(html) if report_class == "A1" else pages.parse_b1_list(html)
+        lines = page.lines
         if page.has_more_pages:
-            logger.warning(
-                "filing %s has multiple pages; only first page captured", feed_item.guid_seq
+            # Paginated list: pull the complete CSV so every line is captured.
+            csv_text = download.download_list_csv(
+                client, feed_item.url, html, FETCH_PAUSE_SECONDS
             )
+            if csv_text is not None:
+                lines = (
+                    download.a1_lines_from_csv(csv_text)
+                    if report_class == "A1"
+                    else download.b1_lines_from_csv(csv_text)
+                )
+                logger.info(
+                    "filing %s: downloaded all %d lines via CSV", feed_item.guid_seq, len(lines)
+                )
+            else:
+                logger.warning(
+                    "filing %s has multiple pages and the CSV download failed; "
+                    "only first page captured",
+                    feed_item.guid_seq,
+                )
         committee = resolve_committee(
             session, client, page.committee_encrypted_id, feed_item.committee_name
         )
-        for ln in page.lines:
+        for ln in lines:
             if report_class == "A1":
                 session.add(
                     FilingLine(
@@ -173,6 +192,11 @@ def process_feed_item(session: Session, client: httpx.Client, feed_item: FeedIte
 
     if committee is not None:
         filing.committee_id = committee.id
+    session.flush()
+    # Persist race matches: the landing page and digests query these instead of
+    # re-running the matching logic.
+    for race_id in matched_race_ids(session, filing):
+        session.add(FilingRace(filing_id=filing.id, race_id=race_id))
     session.flush()
     return filing
 
@@ -294,6 +318,30 @@ def poll_once(client: httpx.Client) -> int:
 
 
 COMMITTEE_SYNC_INTERVAL = 60 * 60 * 24
+DIGEST_HOUR_CENTRAL = 7  # send daily/weekly digests at 7am Central
+
+
+def maybe_run_digests(last_run: dict) -> None:
+    """Fire digest runs once per day after 7am Central. run_digest itself is
+    idempotent (digest_sends unique key), so a restart can't double-send."""
+    from .notify.digest import CENTRAL, run_digest
+
+    now_ct = dt.datetime.now(CENTRAL)
+    if now_ct.hour < DIGEST_HOUR_CENTRAL:
+        return
+    today = now_ct.date()
+    if last_run.get("daily") != today:
+        last_run["daily"] = today
+        try:
+            run_digest("daily", today)
+        except Exception:  # noqa: BLE001 — digests must not stop polling
+            logger.exception("daily digest run failed")
+    if now_ct.weekday() == 0 and last_run.get("weekly") != today:
+        last_run["weekly"] = today
+        try:
+            run_digest("weekly", today)
+        except Exception:  # noqa: BLE001
+            logger.exception("weekly digest run failed")
 
 
 def main() -> None:
@@ -307,6 +355,7 @@ def main() -> None:
     from .committee_sync import sync_committees
 
     last_committee_sync = 0.0
+    last_digest_run: dict = {}
     while True:
         if time.monotonic() - last_committee_sync > COMMITTEE_SYNC_INTERVAL or (
             last_committee_sync == 0.0
@@ -331,6 +380,7 @@ def main() -> None:
                     state.consecutive_errors = (state.consecutive_errors or 0) + 1
             except Exception:  # noqa: BLE001
                 logger.exception("could not record poller error state")
+        maybe_run_digests(last_digest_run)
         elapsed = time.monotonic() - started
         time.sleep(max(5.0, settings.poll_interval_seconds - elapsed))
 

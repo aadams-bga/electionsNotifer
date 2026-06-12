@@ -45,11 +45,125 @@ def _extract_token(text: str, purpose: str) -> str:
     return m.group(1)
 
 
-def test_index_renders(client):
+def test_landing_renders(client):
     resp = client.get("/")
+    assert resp.status_code == 200
+    assert "Today's reports" in resp.text
+    assert "Sign up for alerts" in resp.text
+    # empty state links to the statewide view
+    assert "No reports tied to a CPS Board race yet today" in resp.text
+    assert client.get("/?scope=all").status_code == 200
+
+
+def test_landing_shows_todays_filings(client):
+    from datetime import UTC, datetime
+
+    from isbe_notifier.models import FeedItem, Filing, FilingRace, Race
+
+    with db.session_scope() as s:
+        d7 = s.scalars(select(Race).where(Race.slug == "d7a")).one()
+        item = FeedItem(
+            guid_seq=42, committee_name="Friends of Now", report_type="A-1",
+            source="Filed electronically", url="https://x.test/42",
+            guid_url="https://x.test/42", pub_date=datetime.now(UTC),
+        )
+        stray = FeedItem(
+            guid_seq=43, committee_name="Statewide Stray", report_type="D-2",
+            source="Filed electronically", url="https://x.test/43",
+            guid_url="https://x.test/43", pub_date=datetime.now(UTC),
+        )
+        s.add_all([item, stray])
+        s.flush()
+        filing = Filing(feed_item_seq=42, report_type="A-1", report_class="A1")
+        s.add(filing)
+        s.flush()
+        s.add(FilingRace(filing_id=filing.id, race_id=d7.id))
+
+    resp = client.get("/")
+    assert "Friends of Now" in resp.text
+    assert "District 7a" in resp.text
+    assert "Statewide Stray" not in resp.text  # CPS scope by default
+
+    resp = client.get("/?scope=all")
+    assert "Friends of Now" in resp.text
+    assert "Statewide Stray" in resp.text
+
+
+def test_subscribe_page_renders(client):
+    resp = client.get("/subscribe")
     assert resp.status_code == 200
     assert "District 10b" in resp.text
     assert "CPS Board President" in resp.text
+    assert "All CPS Board races" in resp.text
+    assert "Daily summary" in resp.text
+
+
+def test_login_flow(client):
+    client.post("/api/subscribe", json={
+        "email": "login@example.org", "wants_email": True, "race_slugs": ["d1a"],
+    })
+    client.sent_emails.clear()
+
+    assert client.get("/login").status_code == 200
+    # Known address → email with manage link; response is generic
+    resp = client.post("/login", data={"email": "Login@Example.org"})
+    assert resp.status_code == 200
+    assert "emailed it a sign-in link" in resp.text
+    assert len(client.sent_emails) == 1
+    to, subject, body = client.sent_emails[0]
+    assert to == "login@example.org"
+    token = _extract_token(body, "manage")
+    assert client.get(f"/manage?token={token}").status_code == 200
+
+    # Unknown address → identical response, no email
+    client.sent_emails.clear()
+    resp = client.post("/login", data={"email": "nobody@example.org"})
+    assert "emailed it a sign-in link" in resp.text
+    assert client.sent_emails == []
+
+
+def test_all_cps_and_digest_signup(client):
+    resp = client.post("/api/subscribe", json={
+        "email": "cps@example.org", "wants_email": True, "all_cps": True,
+        "wants_daily_digest": True, "wants_weekly_digest": True,
+    })
+    assert resp.status_code == 200, resp.text
+    with db.session_scope() as s:
+        sub = s.scalars(select(Subscription)).one()
+        assert sub.all_cps is True and sub.all_filings is False
+        subscriber = s.scalars(select(Subscriber)).one()
+        assert subscriber.wants_daily_digest is True
+        assert subscriber.wants_weekly_digest is True
+
+    # digest flags require an email address
+    assert client.post("/api/subscribe", json={
+        "wants_push": True, "race_slugs": ["d1a"], "wants_daily_digest": True,
+    }).status_code == 400
+
+
+def test_manage_updates_flags_and_digests(client):
+    client.post("/api/subscribe", json={
+        "email": "flags@example.org", "wants_email": True, "all_cps": True,
+        "wants_daily_digest": True,
+    })
+    with db.session_scope() as s:
+        sid = s.scalars(select(Subscriber)).one().id
+    manage_token = tokens.make_token(sid, "manage")
+
+    resp = client.get(f"/manage?token={manage_token}")
+    assert "All CPS Board races" in resp.text
+
+    resp = client.post("/api/manage", json={
+        "token": manage_token, "wants_email": True, "all_filings": True,
+        "wants_weekly_digest": True,
+    })
+    assert resp.status_code == 200
+    with db.session_scope() as s:
+        sub = s.scalars(select(Subscription)).one()
+        assert sub.all_filings is True and sub.all_cps is False
+        subscriber = s.scalars(select(Subscriber)).one()
+        assert subscriber.wants_daily_digest is False  # replaced wholesale
+        assert subscriber.wants_weekly_digest is True
 
 
 def test_signup_verify_flow(client):

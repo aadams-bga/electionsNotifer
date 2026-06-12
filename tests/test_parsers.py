@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
+from isbe_notifier.scraper.download import a1_lines_from_csv, b1_lines_from_csv
 from isbe_notifier.scraper.pages import parse_a1_list, parse_b1_list, parse_committee_detail
 from isbe_notifier.scraper.rss import classify, parse_feed
 
@@ -78,6 +79,36 @@ def test_parse_b1_list():
     assert line.office_district == "Chicago School Board, District 7"
     districts = {ln.office_district for ln in page.lines}
     assert "Chicago School Board, District 6" in districts
+
+
+def test_b1_pager_detected():
+    page = parse_b1_list((FIXTURES / "b1_list_paged.html").read_text())
+    assert page.has_more_pages
+    assert len(page.lines) == 4  # pager row is not parsed as data
+
+
+def test_a1_lines_from_csv():
+    lines = a1_lines_from_csv((FIXTURES / "a1_download.csv").read_text())
+    assert len(lines) == 3
+    line = lines[0]
+    assert line.contributed_by == "Associated Firefighters of IL PAC"
+    assert line.amount == Decimal("1000")
+    assert line.received_date == date(2026, 6, 12)
+    assert "Springfield" in line.address
+    assert line.description == "Transfer In"
+
+
+def test_b1_lines_from_csv():
+    lines = b1_lines_from_csv((FIXTURES / "b1_download.csv").read_text())
+    assert len(lines) == 4
+    line = lines[0]
+    assert line.vendor_name == "THE BALDUZZI GROUP"
+    assert line.amount == Decimal("24632")
+    assert line.expended_date is None  # B-1 CSV has no date column
+    assert line.purpose == "Mailing"
+    assert line.supporting_opposing == "Supporting"
+    assert line.candidate_name == "Eva Villalobos"
+    assert line.office_district == "Chicago School Board, District 7"
 
 
 def test_parse_committee_detail():

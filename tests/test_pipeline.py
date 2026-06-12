@@ -22,6 +22,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 A1_URL = "https://elections.il.gov/CampaignDisclosure/A1List.aspx?ID=test1"
 B1_URL = "https://elections.il.gov/CampaignDisclosure/B1List.aspx?ID=test2"
+B1_PAGED_URL = "https://elections.il.gov/CampaignDisclosure/B1List.aspx?ID=paged"
 DETAIL_URL_PART = "CommitteeDetail.aspx"
 
 
@@ -47,6 +48,8 @@ def fake_fetch(monkeypatch):
             return FakeResponse((FIXTURES / "a1_list.html").read_text())
         if url == B1_URL:
             return FakeResponse((FIXTURES / "b1_list.html").read_text())
+        if url == B1_PAGED_URL:
+            return FakeResponse((FIXTURES / "b1_list_paged.html").read_text())
         raise AssertionError(f"unexpected fetch: {url}")
 
     monkeypatch.setattr(poller, "fetch", _fetch)
@@ -229,6 +232,106 @@ def test_race_committee_whitelist_matches_any_report_type(session, fake_fetch, s
     assert poller.notify_filing(session, filing) == 1
     _, subject, _ = sent_emails[0]
     assert "Statement of Organization" in subject
+
+
+def test_multipage_b1_uses_csv_download(session, fake_fetch, sent_emails, monkeypatch):
+    csv_text = (FIXTURES / "b1_download.csv").read_text()
+    calls = []
+
+    def _fake_download(client, url, html, pause=1.0):
+        calls.append(url)
+        return csv_text
+
+    monkeypatch.setattr(poller.download, "download_list_csv", _fake_download)
+    _seed_subscribers(session)
+
+    feed_item = FeedItem(
+        guid_seq=7, committee_name="INCS Action Independent Committee",
+        report_type="B-1 ($1000+ Year Round)", source="Filed electronically",
+        url=B1_PAGED_URL, guid_url=B1_PAGED_URL, pub_date=datetime.now(UTC),
+    )
+    session.add(feed_item)
+    session.flush()
+    filing = poller.process_feed_item(session, None, feed_item)
+
+    assert calls == [B1_PAGED_URL]
+    assert len(filing.lines) == 4
+    # CSV-sourced lines carry no per-line date but full IE detail
+    assert filing.lines[0].line_date is None
+    assert filing.lines[0].amount == Decimal("24632")
+    assert "Chicago School Board, District 7" in {ln.office_district for ln in filing.lines}
+    # Race subscriber is still notified, and the email omits the missing date
+    assert poller.notify_filing(session, filing) == 1
+    _, _, body = sent_emails[0]
+    assert "(date unavailable)" not in body
+
+
+def test_multipage_csv_failure_falls_back_to_first_page(
+    session, fake_fetch, sent_emails, monkeypatch
+):
+    monkeypatch.setattr(poller.download, "download_list_csv", lambda *a, **k: None)
+    feed_item = FeedItem(
+        guid_seq=8, committee_name="INCS Action Independent Committee",
+        report_type="B-1 ($1000+ Year Round)", source="Filed electronically",
+        url=B1_PAGED_URL, guid_url=B1_PAGED_URL, pub_date=datetime.now(UTC),
+    )
+    session.add(feed_item)
+    session.flush()
+    filing = poller.process_feed_item(session, None, feed_item)
+    assert len(filing.lines) == 4  # page-1 HTML lines
+
+
+def test_filing_race_matches_are_stored(session, fake_fetch):
+    from sqlalchemy import select as sa_select
+
+    from isbe_notifier.models import FilingRace
+
+    _seed_subscribers(session)
+    feed_item = FeedItem(
+        guid_seq=9, committee_name="INCS Action Independent Committee",
+        report_type="B-1 ($1000+ Year Round)", source="Filed electronically",
+        url=B1_URL, guid_url=B1_URL, pub_date=datetime.now(UTC),
+    )
+    session.add(feed_item)
+    session.flush()
+    filing = poller.process_feed_item(session, None, feed_item)
+    stored = session.scalars(
+        sa_select(FilingRace).where(FilingRace.filing_id == filing.id)
+    ).all()
+    assert len(stored) == 1  # the seeded District 7 race
+
+
+def test_all_cps_subscription_matches_race_filings(session, fake_fetch, sent_emails):
+    cps_fan = Subscriber(email="cps@example.org", email_verified_at=datetime.now(UTC))
+    session.add(cps_fan)
+    session.flush()
+    session.add(Subscription(subscriber_id=cps_fan.id, all_cps=True, wants_email=True))
+    _seed_subscribers(session)
+
+    # B-1 targeting District 7 → matches the all-CPS subscriber too
+    feed_item = FeedItem(
+        guid_seq=10, committee_name="INCS Action Independent Committee",
+        report_type="B-1 ($1000+ Year Round)", source="Filed electronically",
+        url=B1_URL, guid_url=B1_URL, pub_date=datetime.now(UTC),
+    )
+    session.add(feed_item)
+    session.flush()
+    filing = poller.process_feed_item(session, None, feed_item)
+    assert poller.notify_filing(session, filing) == 2  # racer + all-CPS subscriber
+    assert {to for to, _, _ in sent_emails} == {"racer@example.org", "cps@example.org"}
+
+    # A non-CPS filing (no race match) must NOT notify the all-CPS subscriber
+    sent_emails.clear()
+    feed_item2 = FeedItem(
+        guid_seq=11, committee_name="Some Random Committee",
+        report_type="Letter / Correspondence", source="Filed on paper",
+        url=None, guid_url="https://elections.il.gov/pdf3", pub_date=datetime.now(UTC),
+    )
+    session.add(feed_item2)
+    session.flush()
+    filing2 = poller.process_feed_item(session, None, feed_item2)
+    assert poller.notify_filing(session, filing2) == 0
+    assert sent_emails == []
 
 
 def test_firehose_matches_every_filing(session, fake_fetch, sent_emails):

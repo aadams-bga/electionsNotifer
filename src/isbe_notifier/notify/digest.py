@@ -46,12 +46,12 @@ def latest_boundary(now_ct: datetime) -> date:
 def period_for(kind: str, boundary: date) -> tuple[date, date]:
     """(start, end) boundary dates; the covered window is start@11pm → end@11pm
     Central. Daily ends at `boundary`; weekly covers the week ending the most
-    recent Monday boundary."""
+    recent Sunday boundary."""
     if kind == "daily":
         return boundary - timedelta(days=1), boundary
     if kind == "weekly":
-        last_monday = boundary - timedelta(days=boundary.weekday())
-        return last_monday - timedelta(days=7), last_monday
+        last_sunday = boundary - timedelta(days=(boundary.weekday() + 1) % 7)
+        return last_sunday - timedelta(days=7), last_sunday
     raise ValueError(f"unknown digest kind: {kind}")
 
 

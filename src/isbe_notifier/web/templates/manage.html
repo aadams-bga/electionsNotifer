@@ -56,11 +56,11 @@
   <label class="channel">
     <input type="checkbox" id="daily-digest" {% if wants_daily_digest %}checked{% endif %}
            {% if not email %}disabled{% endif %}> Daily summary — everything you follow,
-    one email each morning
+    one email each night
   </label>
   <label class="channel">
     <input type="checkbox" id="weekly-digest" {% if wants_weekly_digest %}checked{% endif %}
-           {% if not email %}disabled{% endif %}> Weekly summary — the same, every Monday
+           {% if not email %}disabled{% endif %}> Weekly summary — the same, every Sunday night
   </label>
   {% if not email %}
   <p class="hint">Summary emails require an email address on your subscription.</p>

@@ -111,10 +111,13 @@ def _subscriber(s, email, *, races=(), committees=(), all_cps=False, all_filings
 
 def test_period_for():
     assert digest.period_for("daily", TODAY) == (TODAY - timedelta(days=1), TODAY)
-    # Friday boundary → the week ending the most recent Monday boundary
+    # Friday boundary → the week ending the most recent Sunday boundary
     start, end = digest.period_for("weekly", TODAY)
-    assert start == date(2026, 6, 1) and end == date(2026, 6, 8)
-    assert start.weekday() == 0 and end.weekday() == 0
+    assert start == date(2026, 5, 31) and end == date(2026, 6, 7)
+    assert start.weekday() == 6 and end.weekday() == 6
+    # Fired exactly on the Sunday boundary → the week just ended
+    sunday = date(2026, 6, 14)
+    assert digest.period_for("weekly", sunday) == (date(2026, 6, 7), sunday)
 
 
 def test_latest_boundary():

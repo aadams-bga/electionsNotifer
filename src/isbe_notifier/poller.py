@@ -341,7 +341,7 @@ def maybe_run_digests(last_run: dict) -> None:
             run_digest("daily", boundary)
         except Exception:  # noqa: BLE001 — digests must not stop polling
             logger.exception("daily digest run failed")
-    if boundary.weekday() == 0 and last_run.get("weekly") != boundary:
+    if boundary.weekday() == 6 and last_run.get("weekly") != boundary:  # Sunday 11pm
         last_run["weekly"] = boundary
         try:
             run_digest("weekly", boundary)

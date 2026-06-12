@@ -89,6 +89,13 @@ def test_landing_shows_todays_filings(client):
     assert "Statewide Stray" in resp.text
 
 
+def test_install_page_renders(client):
+    resp = client.get("/install")
+    assert resp.status_code == 200
+    assert "Add to Home Screen" in resp.text
+    assert "iOS 16.4" in resp.text
+
+
 def test_subscribe_page_renders(client):
     resp = client.get("/subscribe")
     assert resp.status_code == 200

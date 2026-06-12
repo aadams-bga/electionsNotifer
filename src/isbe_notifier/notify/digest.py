@@ -32,23 +32,34 @@ logger = logging.getLogger(__name__)
 
 CENTRAL = ZoneInfo("America/Chicago")
 
+# Digests go out at 11pm Central, each covering the 24h (or 7 days) ending at
+# that boundary — so the daily digest summarizes the day that is just ending.
+BOUNDARY_HOUR_CENTRAL = 23
 
-def period_for(kind: str, today: date) -> tuple[date, date]:
-    """[start, end) as Central calendar dates. Daily = yesterday; weekly = the
-    Monday-to-Sunday week that ended most recently."""
+
+def latest_boundary(now_ct: datetime) -> date:
+    """The date of the most recent 11pm-Central boundary that has passed."""
+    d = now_ct.date()
+    return d if now_ct.hour >= BOUNDARY_HOUR_CENTRAL else d - timedelta(days=1)
+
+
+def period_for(kind: str, boundary: date) -> tuple[date, date]:
+    """(start, end) boundary dates; the covered window is start@11pm → end@11pm
+    Central. Daily ends at `boundary`; weekly covers the week ending the most
+    recent Monday boundary."""
     if kind == "daily":
-        start = today - timedelta(days=1)
-        return start, today
+        return boundary - timedelta(days=1), boundary
     if kind == "weekly":
-        last_monday = today - timedelta(days=today.weekday())
+        last_monday = boundary - timedelta(days=boundary.weekday())
         return last_monday - timedelta(days=7), last_monday
     raise ValueError(f"unknown digest kind: {kind}")
 
 
 def _bounds_utc(start: date, end: date) -> tuple[datetime, datetime]:
+    boundary = time(hour=BOUNDARY_HOUR_CENTRAL)
     return (
-        datetime.combine(start, time.min, tzinfo=CENTRAL).astimezone(UTC),
-        datetime.combine(end, time.min, tzinfo=CENTRAL).astimezone(UTC),
+        datetime.combine(start, boundary, tzinfo=CENTRAL).astimezone(UTC),
+        datetime.combine(end, boundary, tzinfo=CENTRAL).astimezone(UTC),
     )
 
 
@@ -142,9 +153,10 @@ def build_digest(
         return None
 
     label = "Daily" if kind == "daily" else "Weekly"
+    # The window ends at 11pm on `end`, so that's the day the digest is "for".
     when = (
-        start.strftime("%B %-d, %Y") if kind == "daily"
-        else f"{start.strftime('%B %-d')} – {(end - timedelta(days=1)).strftime('%B %-d, %Y')}"
+        end.strftime("%B %-d, %Y") if kind == "daily"
+        else f"the week ending {end.strftime('%B %-d, %Y')}"
     )
     subject = f"{label} filing summary — {when}"
     intro = (
@@ -154,10 +166,13 @@ def build_digest(
     return subject, intro + "\n\n".join(sections)
 
 
-def run_digest(kind: str, today: date | None = None, dry_run: bool = False) -> int:
-    """Build and send digests to every opted-in subscriber. Returns emails sent."""
-    today = today or datetime.now(CENTRAL).date()
-    start, end = period_for(kind, today)
+def run_digest(kind: str, boundary: date | None = None, dry_run: bool = False) -> int:
+    """Build and send digests to every opted-in subscriber. Returns emails sent.
+
+    `boundary` is the 11pm-Central boundary the period ends at (default: the
+    most recent one that has passed)."""
+    boundary = boundary or latest_boundary(datetime.now(CENTRAL))
+    start, end = period_for(kind, boundary)
     pref = (
         Subscriber.wants_daily_digest if kind == "daily" else Subscriber.wants_weekly_digest
     )
@@ -210,7 +225,7 @@ def main() -> None:
     parser.add_argument("--kind", choices=("daily", "weekly"), required=True)
     parser.add_argument(
         "--date", type=date.fromisoformat, default=None,
-        help="'today' in Central time for period calculation (default: now)",
+        help="11pm-Central boundary the period ends at (default: most recent)",
     )
     parser.add_argument("--dry-run", action="store_true", help="print instead of sending")
     args = parser.parse_args()

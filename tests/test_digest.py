@@ -41,8 +41,9 @@ def sent_emails(monkeypatch):
     return sent
 
 
-TODAY = date(2026, 6, 12)  # a Friday
-YESTERDAY_UTC = datetime(2026, 6, 11, 18, 0, tzinfo=UTC)  # 1pm Central on June 11
+TODAY = date(2026, 6, 12)  # a Friday, used as the 11pm-Central digest boundary
+# 10am Central on June 12 — inside the daily window (June 11 11pm → June 12 11pm)
+FILED_UTC = datetime(2026, 6, 12, 15, 0, tzinfo=UTC)
 
 
 def _seed_world(s):
@@ -58,13 +59,13 @@ def _seed_world(s):
         item = FeedItem(
             guid_seq=seq, committee_name="x", report_type=report_class,
             source="Filed electronically", url=f"https://x.test/{seq}",
-            guid_url=f"https://x.test/{seq}", pub_date=YESTERDAY_UTC,
+            guid_url=f"https://x.test/{seq}", pub_date=FILED_UTC,
         )
         s.add(item)
         s.flush()
         filing = Filing(
             feed_item_seq=seq, committee_id=committee_id, report_type=report_class,
-            report_class=report_class, created_at=YESTERDAY_UTC,
+            report_class=report_class, created_at=FILED_UTC,
         )
         s.add(filing)
         s.flush()
@@ -110,10 +111,26 @@ def _subscriber(s, email, *, races=(), committees=(), all_cps=False, all_filings
 
 def test_period_for():
     assert digest.period_for("daily", TODAY) == (TODAY - timedelta(days=1), TODAY)
-    # Friday → the Mon–Sun week before the current week
+    # Friday boundary → the week ending the most recent Monday boundary
     start, end = digest.period_for("weekly", TODAY)
     assert start == date(2026, 6, 1) and end == date(2026, 6, 8)
     assert start.weekday() == 0 and end.weekday() == 0
+
+
+def test_latest_boundary():
+    central = digest.CENTRAL
+    # Before 11pm → yesterday's boundary; at/after 11pm → today's
+    assert digest.latest_boundary(datetime(2026, 6, 12, 22, 59, tzinfo=central)) == date(
+        2026, 6, 11
+    )
+    assert digest.latest_boundary(datetime(2026, 6, 12, 23, 0, tzinfo=central)) == TODAY
+
+
+def test_window_is_11pm_to_11pm():
+    lo, hi = digest._bounds_utc(TODAY - timedelta(days=1), TODAY)
+    # June 11 11pm CDT = June 12 04:00 UTC; June 12 11pm CDT = June 13 04:00 UTC
+    assert lo == datetime(2026, 6, 12, 4, 0, tzinfo=UTC)
+    assert hi == datetime(2026, 6, 13, 4, 0, tzinfo=UTC)
 
 
 def test_daily_digest_sections_and_scopes(dbsession, sent_emails):

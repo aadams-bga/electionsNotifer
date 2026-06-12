@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <h2>Install the app</h2>
+  <p>This site is a <strong>progressive web app</strong> (PWA): you can add it to your
+     phone or computer like a regular app — no app store needed. Installing gives you
+     an icon on your home screen and, on iPhone and iPad, it's <strong>required</strong>
+     for push notifications to work.</p>
+
+  <h3>iPhone &amp; iPad (Safari)</h3>
+  <ol>
+    <li>Open this site in <strong>Safari</strong>.</li>
+    <li>Tap the <strong>Share</strong> button (the square with an arrow).</li>
+    <li>Scroll down and tap <strong>"Add to Home Screen,"</strong> then <strong>Add</strong>.</li>
+    <li>Open the app <em>from the new home-screen icon</em>, then turn on push
+        notifications from the sign-up or manage page.</li>
+  </ol>
+  <p class="hint">Apple only allows web push for installed apps (iOS 16.4 or newer).
+     Push enabled in a regular Safari tab won't work on iPhone/iPad.</p>
+
+  <h3>Android (Chrome)</h3>
+  <ol>
+    <li>Open this site in Chrome.</li>
+    <li>Tap the <strong>⋮</strong> menu → <strong>"Install app"</strong>
+        (or "Add to Home screen").</li>
+  </ol>
+  <p class="hint">Optional — push notifications also work in the regular browser
+     on Android.</p>
+
+  <h3>Computer (Chrome / Edge)</h3>
+  <ol>
+    <li>Look for the <strong>install icon</strong> at the right end of the address bar
+        (a screen with a down arrow) and click it.</li>
+  </ol>
+  <p class="hint">Optional — push notifications also work in the regular browser on
+     desktop (Chrome, Edge, and Firefox).</p>
+
+  <h3>Do I need to install it?</h3>
+  <p>Only if you want push notifications on an iPhone or iPad. Everywhere else the
+     site works the same installed or not, and email alerts never require the app.</p>
+
+  <p class="cta-row"><a class="btn" href="/subscribe">Sign up for alerts</a></p>
+</section>
+{% endblock %}

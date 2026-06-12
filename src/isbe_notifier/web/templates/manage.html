@@ -2,6 +2,9 @@
 {% block content %}
 <form id="manage-form" data-vapid-key="{{ vapid_public_key }}" data-token="{{ token }}">
   <h2>Manage your alerts{% if email %} — {{ email }}{% endif %}</h2>
+  <p class="hint">Not {% if email %}{{ email }}{% else %}you{% endif %}?
+    <button type="button" id="switch-account" class="linklike">Switch account on this
+    device</button></p>
 
   <h3>CPS Board races</h3>
   <label class="race all-cps">
@@ -45,6 +48,9 @@
     <input type="checkbox" id="wants-push" {% if wants_push %}checked{% endif %}>
     Push notifications on this device
   </label>
+  <p class="hint">On iPhone/iPad, push only works from the
+    <a href="/install">installed app</a>; on Android and desktop it works right in
+    the browser.</p>
 
   <h3>Summary emails</h3>
   <label class="channel">

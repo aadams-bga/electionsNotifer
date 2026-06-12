@@ -8,6 +8,19 @@
   const statusEl = document.getElementById("form-status");
   const vapidKey = form.dataset.vapidKey || "";
 
+  // Opening a valid manage link signs this device into that account: the nav's
+  // "Manage alerts" and the landing-page button will use it from now on.
+  if (isManage && form.dataset.token) {
+    localStorage.setItem("manage_token", form.dataset.token);
+  }
+  const switchBtn = document.getElementById("switch-account");
+  if (switchBtn) {
+    switchBtn.addEventListener("click", () => {
+      localStorage.removeItem("manage_token");
+      window.location.href = "/login";
+    });
+  }
+
   // --- iOS hint: web push requires the PWA to be installed to the home screen ---
   const iosHint = document.getElementById("ios-hint");
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);

@@ -263,7 +263,9 @@ def subscribe(request: Request, payload: SubscribeRequest):
                 subscriber = Subscriber(email=email)
                 session.add(subscriber)
                 session.flush()
-            needs_verification = payload.wants_email and subscriber.email_verified_at is None
+            needs_verification = (
+                payload.wants_email or payload.wants_daily_digest or payload.wants_weekly_digest
+            ) and subscriber.email_verified_at is None
         else:
             subscriber = Subscriber(email=None)
             session.add(subscriber)

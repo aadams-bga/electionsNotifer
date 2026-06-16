@@ -168,21 +168,27 @@ def test_all_cps_digest_covers_all_races(dbsession, sent_emails):
     assert "District 7" in body and "Jane Doe" in body
 
 
-def test_digest_idempotent_and_skips_empty(dbsession, sent_emails):
+def test_digest_idempotent_and_nothing_to_report(dbsession, sent_emails):
     race, *_ = _seed_world(dbsession)
     _subscriber(dbsession, "racefan@example.org", races=[race])
-    # Subscriber to a race with no filings in the period → no email at all
+    # Subscriber to a race with no filings → gets a "nothing to report" email
     other = dbsession.scalars(select(Race).where(Race.slug == "d8a")).one()
     _subscriber(dbsession, "quiet@example.org", races=[other])
     dbsession.commit()
 
-    assert digest.run_digest("daily", TODAY) == 1
-    assert digest.run_digest("daily", TODAY) == 0  # second run sends nothing
-    assert len(sent_emails) == 1
+    assert digest.run_digest("daily", TODAY) == 2  # both subscribers get an email
+    assert digest.run_digest("daily", TODAY) == 0  # second run sends nothing (idempotent)
+    assert len(sent_emails) == 2
+
+    by_to = {to: body for to, _, body in sent_emails}
+    assert "No new filings" in by_to["quiet@example.org"]
+    assert "District 8a" in by_to["quiet@example.org"]
+
     with db.session_scope() as s:
         sends = s.scalars(select(DigestSend)).all()
-        assert len(sends) == 1 and sends[0].status == "sent"
-        assert sends[0].period_start == TODAY - timedelta(days=1)
+        assert len(sends) == 2
+        assert all(send.status == "sent" for send in sends)
+        assert all(send.period_start == TODAY - timedelta(days=1) for send in sends)
 
 
 def test_unverified_or_optout_excluded(dbsession, sent_emails):

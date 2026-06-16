@@ -262,6 +262,24 @@ def test_bad_tokens_rejected(client):
     }).status_code == 403
 
 
+def test_push_and_digest_sends_verification(client):
+    """Push-only real-time + digest email: providing an email for digests must trigger
+    verification even though the email channel itself isn't checked."""
+    resp = client.post("/api/subscribe", json={
+        "wants_push": True,
+        "wants_email": False,
+        "email": "pusher@example.org",
+        "race_slugs": ["d1a"],
+        "wants_daily_digest": True,
+    })
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["needs_verification"] is True
+    assert len(client.sent_emails) == 1
+    to, _, body = client.sent_emails[0]
+    assert to == "pusher@example.org"
+    assert "verify" in body
+
+
 def test_push_only_signup(client):
     resp = client.post("/api/subscribe", json={
         "wants_push": True, "race_slugs": ["d7a"],

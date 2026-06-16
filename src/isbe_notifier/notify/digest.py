@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from ..config import get_settings
 from ..db import session_scope
-from ..models import DigestSend, Filing, FilingRace, Race, Subscriber, utcnow
+from ..models import DigestSend, Filing, FilingRace, Race, Subscriber, Subscription, utcnow
 from .content import filing_total, line_rows
 from .emailer import send_email
 
@@ -97,8 +97,8 @@ def _render_filing(filing: Filing) -> str:
 def build_digest(
     session: Session, subscriber: Subscriber, filings: list[Filing], kind: str,
     start: date, end: date,
-) -> tuple[str, str] | None:
-    """Returns (subject, body), or None when nothing relevant happened."""
+) -> tuple[str, str]:
+    """Returns (subject, body). Always sends something — even "nothing to report"."""
     flags = {
         "all_filings": any(s.all_filings for s in subscriber.subscriptions),
         "all_cps": any(s.all_cps for s in subscriber.subscriptions),
@@ -149,9 +149,6 @@ def build_digest(
             body = "\n\n".join(_render_filing(f) for f in rest)
             sections.append(f"## Everything else statewide ({len(rest)} filings)\n\n{body}")
 
-    if not sections:
-        return None
-
     label = "Daily" if kind == "daily" else "Weekly"
     # The window ends at 11pm on `end`, so that's the day the digest is "for".
     when = (
@@ -163,6 +160,27 @@ def build_digest(
         f"Here's your {kind} summary of Illinois campaign finance filings "
         f"for {when}.\n\n"
     )
+
+    if not sections:
+        targets = []
+        if flags["all_filings"]:
+            targets.append("any Illinois campaign finance filing statewide")
+        else:
+            if flags["all_cps"]:
+                targets.append("any CPS Board race")
+            else:
+                for rid in digest_race_ids:
+                    targets.append(races[rid].label)
+            for s in subscriber.subscriptions:
+                if s.committee_id and s.committee:
+                    targets.append(s.committee.name)
+        if targets:
+            bullets = "\n".join(f"  • {t}" for t in targets)
+            body = f"No new filings were submitted during this period for:\n\n{bullets}"
+        else:
+            body = "No new filings were submitted during this period."
+        return subject, intro + body
+
     return subject, intro + "\n\n".join(sections)
 
 
@@ -183,17 +201,16 @@ def run_digest(kind: str, boundary: date | None = None, dry_run: bool = False) -
             select(Subscriber)
             .where(pref.is_(True), Subscriber.email.is_not(None),
                    Subscriber.email_verified_at.is_not(None))
-            .options(selectinload(Subscriber.subscriptions))
+            .options(
+                selectinload(Subscriber.subscriptions).selectinload(Subscription.committee)
+            )
         ).all()
         logger.info(
             "%s digest for %s → %s: %d filings, %d opted-in subscribers",
             kind, start, end, len(filings), len(subscribers),
         )
         for subscriber in subscribers:
-            built = build_digest(session, subscriber, filings, kind, start, end)
-            if built is None:
-                continue
-            subject, body = built
+            subject, body = build_digest(session, subscriber, filings, kind, start, end)
             if dry_run:
                 print(f"\n=== {subscriber.email} ===\n{subject}\n\n{body}\n")
                 continue

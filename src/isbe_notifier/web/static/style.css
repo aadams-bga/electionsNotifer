@@ -3,6 +3,7 @@
 :root {
   --navy: #003282;
   --navy-dark: #000a5a;
+  --navy-header: #003a63;
   --link: #003a63;
   --gold: #fac346;
   --gold-dark: #d29b1e;
@@ -28,11 +29,12 @@ button, input {
   font-family: inherit;
 }
 
-/* ── Header: white masthead, hairline rule, uppercase nav ── */
+/* ── Header: navy masthead, gold rule, uppercase nav ── */
 header {
-  background: #fff;
+  background: var(--navy-header);
+  color: #fff;
   padding: 1.25rem 1.25rem 0;
-  border-bottom: 1px solid var(--hairline);
+  border-bottom: 3px solid var(--gold);
 }
 
 header h1 {
@@ -41,14 +43,14 @@ header h1 {
   font-weight: 400;
   font-size: 1.7rem;
   letter-spacing: -0.01em;
-  color: var(--navy);
+  color: #fff;
 }
-.tagline { margin: 0.15rem 0 0; color: var(--text-muted); font-size: 0.9rem; }
+.tagline { margin: 0.15rem 0 0; color: rgba(255, 255, 255, 0.78); font-size: 0.9rem; }
 
 /* ── Nav ─────────────────────────────────────────────── */
 nav { margin-top: 0.9rem; display: flex; flex-wrap: wrap; align-items: center; }
 nav a {
-  color: var(--text);
+  color: rgba(255, 255, 255, 0.85);
   text-decoration: none;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -59,13 +61,11 @@ nav a {
   border-bottom: 3px solid transparent;
   transition: color 150ms ease-in-out, border-color 150ms ease-in-out;
 }
-nav a:hover { color: var(--navy); border-bottom-color: var(--gold); }
+nav a:hover { color: var(--gold); border-bottom-color: var(--gold); }
 nav a.nav-cta {
   background: var(--gold);
   color: var(--text);
   padding: 0.55rem 1.1rem;
-  margin-left: auto;
-  margin-right: 0;
   margin-bottom: 0.6rem;
   border-bottom: none;
   transition: background 150ms ease-in-out;

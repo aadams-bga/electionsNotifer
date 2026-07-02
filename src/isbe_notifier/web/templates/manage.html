@@ -6,65 +6,78 @@
     <button type="button" id="switch-account" class="linklike">Switch account on this
     device</button></p>
 
-  <h3>CPS Board races</h3>
-  <label class="race all-cps">
-    <input type="checkbox" id="all-cps" {% if all_cps %}checked{% endif %}>
-    <strong>All CPS Board races</strong> — the president's race and every district,
-    including any added later
-  </label>
-  <div class="race-grid">
-    {% for race in races %}
-    <label class="race">
-      <input type="checkbox" name="race" value="{{ race.slug }}"
-             {% if race.slug in selected_race_slugs %}checked{% endif %}> {{ race.label }}
+  <section>
+    <h3>Which races do you want to follow?</h3>
+    <label class="race all-cps">
+      <input type="checkbox" id="all-cps" {% if all_cps %}checked{% endif %}>
+      <strong>All CPS Board races</strong> — the president's race and every district,
+      including any added later
     </label>
-    {% endfor %}
-  </div>
-
-  <h3>Everything</h3>
-  <label class="race firehose">
-    <input type="checkbox" id="all-filings" {% if all_filings %}checked{% endif %}>
-    <strong>The firehose</strong> — every report filed statewide (high volume)
-  </label>
-
-  <h3>Committees you follow</h3>
-  <div class="committee-search">
-    <input type="search" id="committee-q" placeholder="Search by committee name or ID…"
-           autocomplete="off">
-    <ul id="committee-results" hidden></ul>
-    <ul id="committee-chosen">
-      {% for c in followed_committees %}
-      <li data-id="{{ c.id }}">{{ c.name }} <button type="button" class="remove">×</button></li>
+    <div class="race-grid">
+      {% for race in races %}
+      <label class="race">
+        <input type="checkbox" name="race" value="{{ race.slug }}"
+               {% if race.slug in selected_race_slugs %}checked{% endif %}> {{ race.label }}
+      </label>
       {% endfor %}
-    </ul>
-  </div>
+    </div>
+  </section>
 
-  <h3>Channels</h3>
-  <label class="channel">
-    <input type="checkbox" id="wants-email" {% if wants_email %}checked{% endif %}
-           {% if not email %}disabled{% endif %}> Email
-  </label>
-  <label class="channel">
-    <input type="checkbox" id="wants-push" {% if wants_push %}checked{% endif %}>
-    Push notifications on this device
-  </label>
-  <p class="hint">On iPhone/iPad, push only works from the
-    <a href="/install">installed app</a>; on Android and desktop it works right in
-    the browser.</p>
+  <section>
+    <h3>What updates do you want?</h3>
+    <label class="channel">
+      <input type="checkbox" id="realtime" {% if wants_email or wants_push %}checked{% endif %}>
+      Real-time alerts — sent minutes after a report is filed
+    </label>
+    <label class="channel">
+      <input type="checkbox" id="daily-digest" {% if wants_daily_digest %}checked{% endif %}
+             {% if not email %}disabled{% endif %}> Daily summary — everything you follow,
+      one email each night
+    </label>
+    <label class="channel">
+      <input type="checkbox" id="weekly-digest" {% if wants_weekly_digest %}checked{% endif %}
+             {% if not email %}disabled{% endif %}> Weekly summary — the same, every Sunday night
+    </label>
+    {% if not email %}
+    <p class="hint">Summary emails require an email address on your subscription.</p>
+    {% endif %}
+  </section>
 
-  <h3>Summary emails</h3>
-  <label class="channel">
-    <input type="checkbox" id="daily-digest" {% if wants_daily_digest %}checked{% endif %}
-           {% if not email %}disabled{% endif %}> Daily summary — everything you follow,
-    one email each night
-  </label>
-  <label class="channel">
-    <input type="checkbox" id="weekly-digest" {% if wants_weekly_digest %}checked{% endif %}
-           {% if not email %}disabled{% endif %}> Weekly summary — the same, every Sunday night
-  </label>
-  {% if not email %}
-  <p class="hint">Summary emails require an email address on your subscription.</p>
-  {% endif %}
+  <section>
+    <h3>How should we reach you?</h3>
+    <label class="channel">
+      <input type="checkbox" id="wants-email" {% if wants_email %}checked{% endif %}
+             {% if not email %}disabled{% endif %}> Real-time alerts by email
+    </label>
+    <label class="channel">
+      <input type="checkbox" id="wants-push" {% if wants_push %}checked{% endif %}>
+      Real-time alerts by push notification on this device
+    </label>
+    <p class="hint">On iPhone/iPad, push only works from the
+      <a href="/install">installed app</a>; on Android and desktop it works right in
+      the browser.</p>
+  </section>
+
+  <details class="advanced" {% if all_filings or followed_committees %}open{% endif %}>
+    <summary>Advanced options</summary>
+    <h3>Follow everything statewide</h3>
+    <label class="race firehose">
+      <input type="checkbox" id="all-filings" {% if all_filings %}checked{% endif %}>
+      <strong>The firehose</strong> — every report filed statewide (high volume)
+    </label>
+
+    <h3>Committees you follow</h3>
+    <div class="committee-search">
+      <input type="search" id="committee-q" placeholder="Search by committee name or ID…"
+             autocomplete="off">
+      <ul id="committee-results" hidden></ul>
+      <ul id="committee-chosen">
+        {% for c in followed_committees %}
+        <li data-id="{{ c.id }}">{{ c.name }} <button type="button" class="remove">×</button></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </details>
 
   <button type="submit">Save changes</button>
   <p id="form-status" role="status"></p>

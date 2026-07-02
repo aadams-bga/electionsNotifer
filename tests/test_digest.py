@@ -36,7 +36,8 @@ def sent_emails(monkeypatch):
     sent = []
     monkeypatch.setattr(
         digest, "send_email",
-        lambda to, subject, body, url, sid: sent.append((to, subject, body)),
+        lambda to, subject, body, url, sid, body_html=None:
+            sent.append((to, subject, body, body_html)),
     )
     return sent
 
@@ -144,19 +145,23 @@ def test_daily_digest_sections_and_scopes(dbsession, sent_emails):
     dbsession.commit()
 
     assert digest.run_digest("daily", TODAY) == 3
-    by_to = {to: (subject, body) for to, subject, body in sent_emails}
+    by_to = {to: (subject, body, html) for to, subject, body, html in sent_emails}
 
-    subject, body = by_to["racefan@example.org"]
+    subject, body, html = by_to["racefan@example.org"]
     assert "Daily filing summary" in subject
     assert "District 7" in body and "Jane Doe" in body
     assert "Big Donor" not in body  # not their committee
+    assert "You're following District 7." in body
+    assert "<strong>" in html and "Jane Doe" in html
 
-    _, body = by_to["committeefan@example.org"]
+    _, body, _ = by_to["committeefan@example.org"]
     assert "Big Donor" in body and "Jane Doe" not in body
+    assert "You're following Friends of Example." in body
 
-    _, body = by_to["hose@example.org"]
+    _, body, _ = by_to["hose@example.org"]
     assert "Everything else statewide" in body
     assert "Jane Doe" in body and "Big Donor" in body
+    assert "every campaign finance filing statewide" in body
 
 
 def test_all_cps_digest_covers_all_races(dbsession, sent_emails):
@@ -164,7 +169,7 @@ def test_all_cps_digest_covers_all_races(dbsession, sent_emails):
     _subscriber(dbsession, "cps@example.org", all_cps=True)
     dbsession.commit()
     assert digest.run_digest("daily", TODAY) == 1
-    _, _, body = sent_emails[0]
+    _, _, body, _ = sent_emails[0]
     assert "District 7" in body and "Jane Doe" in body
 
 
@@ -180,15 +185,87 @@ def test_digest_idempotent_and_nothing_to_report(dbsession, sent_emails):
     assert digest.run_digest("daily", TODAY) == 0  # second run sends nothing (idempotent)
     assert len(sent_emails) == 2
 
-    by_to = {to: body for to, _, body in sent_emails}
+    by_to = {to: body for to, _, body, _ in sent_emails}
     assert "No new filings" in by_to["quiet@example.org"]
-    assert "District 8a" in by_to["quiet@example.org"]
+    assert "You're following District 8a." in by_to["quiet@example.org"]
+    assert "•" not in by_to["quiet@example.org"]  # hierarchy without bullets
 
     with db.session_scope() as s:
         sends = s.scalars(select(DigestSend)).all()
         assert len(sends) == 2
         assert all(send.status == "sent" for send in sends)
         assert all(send.period_start == TODAY - timedelta(days=1) for send in sends)
+
+
+def test_digest_committee_grouping_and_ordering(dbsession, sent_emails):
+    """Within a race: committees alphabetical; within a committee D-1 → D-2 → A-1
+    → B-1, A-1s largest first; committee header carries the A-1 money total."""
+    race, *_ = _seed_world(dbsession)
+    zebra = Committee(id=333, name="Zebra PAC")
+    alpha = Committee(id=444, name="Alpha Fund")
+    dbsession.add_all([zebra, alpha])
+    dbsession.flush()
+
+    def make_filing(seq, committee_id, report_class, report_type=None, line=None):
+        item = FeedItem(
+            guid_seq=seq, committee_name="x", report_type=report_type or report_class,
+            source="Filed electronically", url=f"https://x.test/{seq}",
+            guid_url=f"https://x.test/{seq}", pub_date=FILED_UTC,
+        )
+        dbsession.add(item)
+        dbsession.flush()
+        filing = Filing(
+            feed_item_seq=seq, committee_id=committee_id,
+            report_type=report_type or report_class,
+            report_class=report_class, created_at=FILED_UTC,
+        )
+        dbsession.add(filing)
+        dbsession.flush()
+        dbsession.add(FilingRace(filing_id=filing.id, race_id=race.id))
+        if line:
+            dbsession.add(FilingLine(filing=filing, **line))
+        dbsession.flush()
+        return filing
+
+    # Zebra: small A-1, big A-1, and a D-1 — expect D-1 first, then A-1s by size.
+    make_filing(10, 333, "A1", line={
+        "kind": "contribution", "name": "Small Donor", "amount": Decimal("1000")})
+    make_filing(11, 333, "A1", line={
+        "kind": "contribution", "name": "Huge Donor", "amount": Decimal("50000")})
+    make_filing(12, 333, "D1", report_type="Statement of Organization")
+    make_filing(13, 444, "D2", report_type="Quarterly Report")
+
+    _subscriber(dbsession, "order@example.org", races=[race])
+    dbsession.commit()
+
+    assert digest.run_digest("daily", TODAY) == 1
+    _, _, body, html = sent_emails[0]
+
+    # Committees alphabetical: Alpha Fund before Zebra PAC
+    assert body.index("Alpha Fund") < body.index("Zebra PAC")
+    # Committee header shows the A-1 sum
+    assert "Zebra PAC — $51,000.00 in major donations" in body
+    # D-1 before either A-1; A-1s in decreasing order of size
+    zebra_at = body.index("Zebra PAC")
+    assert body.index("Statement of Organization", zebra_at) \
+        < body.index("Huge Donor") < body.index("Small Donor")
+    assert "Zebra PAC — $51,000.00 in major donations" in html
+
+
+def test_send_email_html_multipart(monkeypatch):
+    from isbe_notifier.notify import emailer
+
+    captured = {}
+    monkeypatch.setattr(emailer, "get_email_backend",
+                        lambda: type("B", (), {"send": lambda self, m: captured.update(msg=m)})())
+    emailer.send_email("x@example.org", "Subj", "text body", None, 1,
+                       body_html="<p><strong>bold</strong></p>")
+    msg = captured["msg"]
+    assert msg.get_content_type() == "multipart/alternative"
+    text = msg.get_body(preferencelist=("plain",)).get_content()
+    html = msg.get_body(preferencelist=("html",)).get_content()
+    assert "text body" in text and "Unsubscribe" in text
+    assert "<strong>bold</strong>" in html and "Unsubscribe" in html
 
 
 def test_unverified_or_optout_excluded(dbsession, sent_emails):

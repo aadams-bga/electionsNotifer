@@ -122,8 +122,20 @@
     submitBtn.disabled = true;
     statusEl.textContent = "";
 
-    const wantsEmail = document.getElementById("wants-email").checked;
-    const wantsPush = document.getElementById("wants-push").checked;
+    // Email/push checkboxes are delivery methods for real-time alerts; with
+    // real-time off, digests are the only sends and they're always email.
+    const realtime = document.getElementById("realtime");
+    const realtimeOn = !realtime || realtime.checked;
+    const emailChannel = document.getElementById("wants-email").checked;
+    const pushChannel = document.getElementById("wants-push").checked;
+    if (realtimeOn && !emailChannel && !pushChannel) {
+      statusEl.textContent =
+        "Real-time alerts need a delivery method — check email or push notifications below.";
+      submitBtn.disabled = false;
+      return;
+    }
+    const wantsEmail = realtimeOn && emailChannel;
+    const wantsPush = realtimeOn && pushChannel;
     const emailInput = document.getElementById("email");
     const allFilings = document.getElementById("all-filings");
     const allCps = document.getElementById("all-cps");

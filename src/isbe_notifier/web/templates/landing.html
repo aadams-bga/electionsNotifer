@@ -17,16 +17,12 @@
 </section>
 
 <section>
-  <h2>Today's reports</h2>
-  <p class="scope-toggle">
-    {% if scope == "cps" %}
-      <strong>CPS Board races ({{ cps_count }})</strong> ·
-      <a href="/?scope=all">All statewide ({{ total_count }}{% if capped %}+{% endif %})</a>
-    {% else %}
-      <a href="/">CPS Board races ({{ cps_count }})</a> ·
-      <strong>All statewide ({{ total_count }}{% if capped %}+{% endif %})</strong>
-    {% endif %}
-  </p>
+  {% if scope == "cps" %}
+  <h2>Today's reports in CPS Board races ({{ cps_count }})</h2>
+  {% else %}
+  <h2>Today's reports statewide ({{ total_count }}{% if capped %}+{% endif %})</h2>
+  <p class="scope-toggle"><a href="/">← Back to CPS Board races ({{ cps_count }})</a></p>
+  {% endif %}
 
   {% if rows %}
   <table class="filings">
@@ -53,9 +49,13 @@
   {% else %}
   <p class="hint">
     {% if scope == "cps" %}No reports tied to a CPS Board race yet today.
-      <a href="/?scope=all">See all of today's statewide filings ({{ total_count }})</a>.
     {% else %}No reports filed yet today.{% endif %}
   </p>
+  {% endif %}
+
+  {% if scope == "cps" %}
+  <p class="hint">Advanced:
+    <a href="/?scope=all">see all of today's statewide filings ({{ total_count }}{% if capped %}+{% endif %})</a></p>
   {% endif %}
 </section>
 

@@ -15,15 +15,15 @@
 * { box-sizing: border-box; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   margin: 0;
   background: var(--bg);
   color: var(--text);
   line-height: 1.55;
 }
 
-h1, h2, h3 {
-  font-family: Georgia, "Times New Roman", serif;
+button, input {
+  font-family: inherit;
 }
 
 /* ── Header ─────────────────────────────────────────── */
@@ -35,8 +35,7 @@ header {
 }
 
 header h1 { margin: 0; font-size: 1.2rem; }
-.tagline { margin: 0.2rem 0 0; opacity: 0.78; font-size: 0.875rem;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.tagline { margin: 0.2rem 0 0; opacity: 0.78; font-size: 0.875rem; }
 
 /* ── Nav ─────────────────────────────────────────────── */
 nav { margin-top: 0.6rem; display: flex; flex-wrap: wrap; }
@@ -72,6 +71,25 @@ section {
   margin-bottom: 1rem;
 }
 section.hero { border-left: 4px solid var(--gold); }
+
+/* Signup/manage forms: no boxes — headings carry the hierarchy */
+form#signup-form section, form#manage-form section {
+  border: 0;
+  padding: 0;
+  margin-bottom: 1.75rem;
+}
+
+/* ── Advanced options (firehose + committee search) ──── */
+details.advanced { margin: 1.5rem 0; }
+details.advanced > summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.25rem 0;
+}
+details.advanced > summary:hover { color: var(--navy); }
+details.advanced[open] > summary { margin-bottom: 0.5rem; }
 
 /* ── Typography ──────────────────────────────────────── */
 h2 { font-size: 1.15rem; margin-top: 1.25rem; margin-bottom: 0.4rem; color: var(--navy); }
@@ -152,7 +170,6 @@ table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
 th {
   background: var(--navy); color: #fff;
   padding: 0.4rem 0.6rem; text-align: left;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.775rem; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.04em;
 }

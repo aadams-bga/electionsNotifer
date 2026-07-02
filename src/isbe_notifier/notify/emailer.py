@@ -3,6 +3,7 @@
 Every email carries List-Unsubscribe headers and a footer unsubscribe link.
 """
 
+import html as html_mod
 import logging
 from email.message import EmailMessage
 
@@ -13,7 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 def _build_message(
-    to_email: str, subject: str, body_text: str, link_url: str | None, subscriber_id: int
+    to_email: str, subject: str, body_text: str, link_url: str | None, subscriber_id: int,
+    body_html: str | None = None,
 ) -> EmailMessage:
     settings = get_settings()
     unsub = unsubscribe_url(subscriber_id)
@@ -35,15 +37,27 @@ def _build_message(
         f"{settings.site_name}"
     )
     msg.set_content(body_text + footer)
+
+    if body_html is not None:
+        html_footer = (
+            '<hr style="border:none;border-top:1px solid #dce1e9;margin:1.5em 0">'
+            f'<p style="color:#4f5566;font-size:0.85em">'
+            f'<a href="{html_mod.escape(manage, quote=True)}">Manage your alerts</a> · '
+            f'<a href="{html_mod.escape(unsub, quote=True)}">Unsubscribe from all alerts</a><br>'
+            f"{html_mod.escape(settings.site_name)}</p>"
+        )
+        msg.add_alternative(body_html + html_footer, subtype="html")
     return msg
 
 
 class ConsoleEmailBackend:
     def send(self, msg: EmailMessage) -> None:
-        # Decoded body (not raw MIME) so links can be copied straight from logs.
+        # Decoded plain-text body (not raw MIME) so links can be copied from logs.
+        text_part = msg.get_body(preferencelist=("plain",))
         logger.info(
             "EMAIL (console backend)\nTo: %s\nSubject: %s\n%s",
-            msg["To"], msg["Subject"], msg.get_content(),
+            msg["To"], msg["Subject"],
+            text_part.get_content() if text_part else "(no text part)",
         )
 
 
@@ -78,6 +92,7 @@ def send_email(
     body_text: str,
     link_url: str | None,
     subscriber_id: int,
+    body_html: str | None = None,
 ) -> None:
-    msg = _build_message(to_email, subject, body_text, link_url, subscriber_id)
+    msg = _build_message(to_email, subject, body_text, link_url, subscriber_id, body_html)
     get_email_backend().send(msg)

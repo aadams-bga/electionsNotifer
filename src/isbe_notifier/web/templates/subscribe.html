@@ -2,8 +2,7 @@
 {% block content %}
 <form id="signup-form" data-vapid-key="{{ vapid_public_key }}">
   <section>
-    <h2>1. Pick what to follow</h2>
-    <h3>Chicago Public Schools Board races (2026)</h3>
+    <h2>1. Which races do you want to follow?</h2>
     <label class="race all-cps">
       <input type="checkbox" id="all-cps"> <strong>All CPS Board races</strong> —
       the president's race and every district, including any added later
@@ -15,40 +14,14 @@
       </label>
       {% endfor %}
     </div>
-
-    <h3>Or follow everything</h3>
-    <label class="race firehose">
-      <input type="checkbox" id="all-filings"> <strong>The firehose</strong> — every report
-      filed with the State Board of Elections, statewide
-    </label>
-    <p class="hint">⚠️ High volume: often hundreds of filings per day near quarterly
-      deadlines. Best with push notifications or a filtered inbox.</p>
-
-    <h3>Or follow any Illinois committee</h3>
-    <div class="committee-search">
-      <input type="search" id="committee-q" placeholder="Search by committee name or ID…"
-             autocomplete="off">
-      <ul id="committee-results" hidden></ul>
-      <ul id="committee-chosen"></ul>
-    </div>
   </section>
 
   <section>
-    <h2>2. How should we reach you?</h2>
+    <h2>2. What updates do you want?</h2>
     <label class="channel">
-      <input type="checkbox" id="wants-email" checked> Email
+      <input type="checkbox" id="realtime" checked> Real-time alerts — sent minutes
+      after a report is filed
     </label>
-    <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
-    <label class="channel">
-      <input type="checkbox" id="wants-push"> Push notifications on this device
-    </label>
-    <p class="hint">On iPhone/iPad, push only works after you
-      <a href="/install">install the app</a> to your home screen. On Android and
-      desktop it works right in the browser.</p>
-    <p class="hint" id="ios-hint" hidden>⚠️ You're on an iPhone/iPad browser tab —
-      <a href="/install">install the app first</a> or push won't be delivered.</p>
-
-    <h3>Summary emails (optional)</h3>
     <label class="channel">
       <input type="checkbox" id="daily-digest"> Daily summary — everything you follow,
       one email each night
@@ -56,8 +29,43 @@
     <label class="channel">
       <input type="checkbox" id="weekly-digest"> Weekly summary — the same, every Sunday night
     </label>
-    <p class="hint">Summaries require an email address. Real-time alerts are unaffected.</p>
   </section>
+
+  <section>
+    <h2>3. How should we reach you?</h2>
+    <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+    <label class="channel">
+      <input type="checkbox" id="wants-email" checked> Real-time alerts by email
+    </label>
+    <label class="channel">
+      <input type="checkbox" id="wants-push"> Real-time alerts by push notification
+      on this device
+    </label>
+    <p class="hint">Daily and weekly summaries always arrive by email. On iPhone/iPad,
+      push only works after you <a href="/install">install the app</a> to your home
+      screen; on Android and desktop it works right in the browser.</p>
+    <p class="hint" id="ios-hint" hidden>⚠️ You're on an iPhone/iPad browser tab —
+      <a href="/install">install the app first</a> or push won't be delivered.</p>
+  </section>
+
+  <details class="advanced">
+    <summary>Advanced options</summary>
+    <h3>Follow everything statewide</h3>
+    <label class="race firehose">
+      <input type="checkbox" id="all-filings"> <strong>The firehose</strong> — every report
+      filed with the State Board of Elections, statewide
+    </label>
+    <p class="hint">⚠️ High volume: often hundreds of filings per day near quarterly
+      deadlines. Best with push notifications or a filtered inbox.</p>
+
+    <h3>Follow any Illinois committee</h3>
+    <div class="committee-search">
+      <input type="search" id="committee-q" placeholder="Search by committee name or ID…"
+             autocomplete="off">
+      <ul id="committee-results" hidden></ul>
+      <ul id="committee-chosen"></ul>
+    </div>
+  </details>
 
   <button type="submit" id="submit-btn">Sign up for alerts</button>
   <p id="form-status" role="status"></p>

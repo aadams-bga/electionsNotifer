@@ -52,6 +52,8 @@ def test_landing_renders(client):
     assert "Sign up for alerts" in resp.text
     # empty state links to the statewide view
     assert "No reports tied to a CPS Board race yet today" in resp.text
+    # statewide view is demoted to an Advanced link below the CPS table
+    assert "/?scope=all" in resp.text
     assert client.get("/?scope=all").status_code == 200
 
 
@@ -103,6 +105,9 @@ def test_subscribe_page_renders(client):
     assert "CPS Board President" in resp.text
     assert "All CPS Board races" in resp.text
     assert "Daily summary" in resp.text
+    assert "Real-time alerts" in resp.text
+    assert "Advanced options" in resp.text  # firehose + committee search live here
+    assert "firehose" in resp.text.lower()
 
 
 def test_login_flow(client):

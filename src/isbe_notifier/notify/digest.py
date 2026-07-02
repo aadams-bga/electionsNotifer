@@ -14,6 +14,7 @@ Manual run / preview:
 """
 
 import argparse
+import html as html_mod
 import logging
 from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
@@ -25,7 +26,7 @@ from sqlalchemy.orm import Session, selectinload
 from ..config import get_settings
 from ..db import session_scope
 from ..models import DigestSend, Filing, FilingRace, Race, Subscriber, Subscription, utcnow
-from .content import filing_total, line_rows
+from .content import _date, _money, filing_total
 from .emailer import send_email
 
 logger = logging.getLogger(__name__)
@@ -79,26 +80,119 @@ def _filings_in_period(session: Session, start: date, end: date) -> list[Filing]
     )
 
 
-def _render_filing(filing: Filing) -> str:
-    feed_item = filing.feed_item
-    committee = filing.committee.name if filing.committee else feed_item.committee_name
+# Within a committee: organizational filings first, then money filings by size.
+_CLASS_ORDER = {"D1": 0, "D2": 1, "A1": 2, "B1": 3}
+
+_esc = html_mod.escape
+
+
+def _committee_name(filing: Filing) -> str:
+    return filing.committee.name if filing.committee else filing.feed_item.committee_name
+
+
+def _filing_sort_key(filing: Filing):
+    order = _CLASS_ORDER.get(filing.report_class, 4)
+    total = filing_total(filing) if filing.report_class in ("A1", "B1") else 0
+    return (order, -total, filing.created_at)
+
+
+def _filing_lines(filing: Filing) -> list[str]:
+    """Plain lines describing one filing; the last line is always the ISBE link.
+    Hierarchy comes from bolding (HTML) and newlines — no bullets, no indents."""
     amendment = " (amendment)" if filing.is_amendment else ""
-    head = f"• {committee} — {filing.report_type}{amendment}"
-    if filing.report_class in ("A1", "B1") and filing.lines:
+    lines: list[str] = []
+    if filing.report_class == "A1" and filing.lines:
         n = len(filing.lines)
-        noun = "contribution" if filing.report_class == "A1" else "expenditure"
-        head += f": {n} {noun}{'s' if n != 1 else ''} totaling ${filing_total(filing):,.2f}"
-    parts = [head]
-    parts.extend(line_rows(filing))
-    parts.append(f"  {feed_item.url or feed_item.guid_url}")
-    return "\n".join(parts)
+        lines.append(
+            f"A-1{amendment}: {n} major contribution{'s' if n != 1 else ''} "
+            f"totaling {_money(filing_total(filing))}"
+        )
+        for ln in filing.lines:
+            row = f"{_money(ln.amount)} from {ln.name}"
+            if ln.line_date:
+                row += f", received {_date(ln.line_date)}"
+            if ln.description:
+                row += f" ({ln.description})"
+            lines.append(row)
+    elif filing.report_class == "B1" and filing.lines:
+        n = len(filing.lines)
+        lines.append(
+            f"B-1{amendment}: {n} independent expenditure{'s' if n != 1 else ''} "
+            f"totaling {_money(filing_total(filing))}"
+        )
+        for ln in filing.lines:
+            parts = [f"{_money(ln.amount)} to {ln.vendor_name}"]
+            if ln.line_date:
+                parts[0] += f" on {_date(ln.line_date)}"
+            if ln.purpose:
+                parts.append(f"purpose: {ln.purpose}")
+            if ln.supporting_opposing and ln.candidate_name:
+                parts.append(f"{ln.supporting_opposing.lower()} {ln.candidate_name}")
+            if ln.office_district:
+                parts.append(f"({ln.office_district})")
+            lines.append(" — ".join(parts))
+    else:
+        lines.append(f"{filing.report_type}{amendment} filed")
+    lines.append(filing.feed_item.url or filing.feed_item.guid_url)
+    return lines
+
+
+def _render_committee(name: str, filings: list[Filing]) -> tuple[str, str]:
+    """One committee's block: bold header (with the period's A-1 money when any),
+    then its filings D-1 → D-2 → A-1 → B-1 → rest, money filings largest first.
+    Returns (text, html)."""
+    ordered = sorted(filings, key=_filing_sort_key)
+    a1_total = sum(
+        (filing_total(f) for f in ordered if f.report_class == "A1"), start=0
+    )
+    header = f"{name} — {_money(a1_total)} in major donations" if a1_total else name
+
+    text_blocks = [header]
+    html_parts = [
+        f'<p style="margin:1.25em 0 0.25em"><strong>{_esc(header)}</strong></p>'
+    ]
+    for filing in ordered:
+        lines = _filing_lines(filing)
+        text_blocks.append("\n".join(lines))
+        url = lines[-1]
+        rows = "<br>\n".join(_esc(line) for line in lines[:-1])
+        html_parts.append(
+            f'<p style="margin:0 0 0.9em">{rows}<br>\n'
+            f'<a href="{_esc(url, quote=True)}">View the filing</a></p>'
+        )
+    return "\n\n".join(text_blocks), "\n".join(html_parts)
+
+
+def _render_section(heading: str, filings: list[Filing]) -> tuple[str, str]:
+    """A digest section (a race, followed committees, or the statewide rest):
+    heading, then each committee alphabetically. Returns (text, html)."""
+    groups: dict[str, list[Filing]] = {}
+    for filing in filings:
+        groups.setdefault(_committee_name(filing), []).append(filing)
+    text_parts = [heading]
+    html_parts = [
+        f'<h2 style="font-size:1.05em;color:#003282;margin:1.75em 0 0.25em">'
+        f"{_esc(heading)}</h2>"
+    ]
+    for name in sorted(groups, key=str.casefold):
+        text, html = _render_committee(name, groups[name])
+        text_parts.append(text)
+        html_parts.append(html)
+    return "\n\n".join(text_parts), "\n".join(html_parts)
+
+
+def _join(items: list[str]) -> str:
+    if len(items) <= 1:
+        return items[0] if items else ""
+    return ", ".join(items[:-1]) + " and " + items[-1]
 
 
 def build_digest(
     session: Session, subscriber: Subscriber, filings: list[Filing], kind: str,
     start: date, end: date,
-) -> tuple[str, str]:
-    """Returns (subject, body). Always sends something — even "nothing to report"."""
+) -> tuple[str, str, str]:
+    """Returns (subject, text_body, html_body). Always sends something — even
+    "nothing to report"."""
     flags = {
         "all_filings": any(s.all_filings for s in subscriber.subscriptions),
         "all_cps": any(s.all_cps for s in subscriber.subscriptions),
@@ -123,15 +217,14 @@ def build_digest(
     )
 
     by_id = {f.id: f for f in filings}
-    sections: list[str] = []
+    sections: list[tuple[str, str]] = []  # (text, html)
     covered: set[int] = set()
 
     for rid in digest_race_ids:
-        matched = sorted(race_matches.get(rid, ()), key=lambda fid: by_id[fid].created_at)
+        matched = race_matches.get(rid, set())
         if not matched:
             continue
-        body = "\n\n".join(_render_filing(by_id[fid]) for fid in matched)
-        sections.append(f"## {races[rid].label}\n\n{body}")
+        sections.append(_render_section(races[rid].label, [by_id[fid] for fid in matched]))
         covered.update(matched)
 
     committee_filings = [
@@ -139,15 +232,14 @@ def build_digest(
         if f.committee_id in followed_committee_ids and f.id not in covered
     ]
     if committee_filings:
-        body = "\n\n".join(_render_filing(f) for f in committee_filings)
-        sections.append(f"## Committees you follow\n\n{body}")
+        sections.append(_render_section("Committees you follow", committee_filings))
         covered.update(f.id for f in committee_filings)
 
     if flags["all_filings"]:
         rest = [f for f in filings if f.id not in covered]
         if rest:
-            body = "\n\n".join(_render_filing(f) for f in rest)
-            sections.append(f"## Everything else statewide ({len(rest)} filings)\n\n{body}")
+            heading = f"Everything else statewide ({len(rest)} filings)"
+            sections.append(_render_section(heading, rest))
 
     label = "Daily" if kind == "daily" else "Weekly"
     # The window ends at 11pm on `end`, so that's the day the digest is "for".
@@ -156,32 +248,46 @@ def build_digest(
         else f"the week ending {end.strftime('%B %-d, %Y')}"
     )
     subject = f"{label} filing summary — {when}"
+
+    # Recap what the subscriber follows right in the intro sentence.
+    if flags["all_filings"]:
+        recap = "every campaign finance filing statewide — all races and committees"
+    else:
+        followed = []
+        if flags["all_cps"]:
+            followed.append("every CPS Board race")
+        else:
+            followed.extend(races[rid].label for rid in digest_race_ids)
+        followed.extend(sorted(
+            (s.committee.name for s in subscriber.subscriptions
+             if s.committee_id and s.committee),
+            key=str.casefold,
+        ))
+        recap = _join(followed)
     intro = (
-        f"Here's your {kind} summary of Illinois campaign finance filings "
-        f"for {when}.\n\n"
+        f"Here's your {kind} summary of Illinois campaign finance filings for {when}."
     )
+    if recap:
+        intro += f" You're following {recap}."
 
-    if not sections:
-        targets = []
-        if flags["all_filings"]:
-            targets.append("any Illinois campaign finance filing statewide")
-        else:
-            if flags["all_cps"]:
-                targets.append("any CPS Board race")
-            else:
-                for rid in digest_race_ids:
-                    targets.append(races[rid].label)
-            for s in subscriber.subscriptions:
-                if s.committee_id and s.committee:
-                    targets.append(s.committee.name)
-        if targets:
-            bullets = "\n".join(f"  • {t}" for t in targets)
-            body = f"No new filings were submitted during this period for:\n\n{bullets}"
-        else:
-            body = "No new filings were submitted during this period."
-        return subject, intro + body
+    if sections:
+        text_body = intro + "\n\n\n" + "\n\n\n".join(t for t, _ in sections)
+    else:
+        text_body = intro + "\n\nNo new filings were submitted during this period."
 
-    return subject, intro + "\n\n".join(sections)
+    html_parts = [f'<p style="margin:0 0 1em">{_esc(intro)}</p>']
+    if sections:
+        html_parts.extend(h for _, h in sections)
+    else:
+        html_parts.append(
+            '<p style="margin:0 0 1em">No new filings were submitted during '
+            "this period.</p>"
+        )
+    html_body = (
+        '<div style="font-family:Arial,Helvetica,sans-serif;color:#111111;'
+        'line-height:1.5;max-width:640px">' + "\n".join(html_parts) + "</div>"
+    )
+    return subject, text_body, html_body
 
 
 def run_digest(kind: str, boundary: date | None = None, dry_run: bool = False) -> int:
@@ -210,7 +316,9 @@ def run_digest(kind: str, boundary: date | None = None, dry_run: bool = False) -
             kind, start, end, len(filings), len(subscribers),
         )
         for subscriber in subscribers:
-            subject, body = build_digest(session, subscriber, filings, kind, start, end)
+            subject, body, body_html = build_digest(
+                session, subscriber, filings, kind, start, end
+            )
             if dry_run:
                 print(f"\n=== {subscriber.email} ===\n{subject}\n\n{body}\n")
                 continue
@@ -223,7 +331,10 @@ def run_digest(kind: str, boundary: date | None = None, dry_run: bool = False) -
             except IntegrityError:
                 continue  # already sent for this period
             try:
-                send_email(subscriber.email, subject, body, None, subscriber.id)
+                send_email(
+                    subscriber.email, subject, body, None, subscriber.id,
+                    body_html=body_html,
+                )
                 record.status = "sent"
                 record.sent_at = utcnow()
                 sent += 1

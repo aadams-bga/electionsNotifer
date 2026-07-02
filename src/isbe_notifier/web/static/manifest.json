@@ -4,8 +4,8 @@
   "description": "Real-time alerts when Illinois campaign finance reports are filed",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f7f6f2",
-  "theme_color": "#1a2e4a",
+  "background_color": "#ffffff",
+  "theme_color": "#003282",
   "icons": [
     { "src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png" }

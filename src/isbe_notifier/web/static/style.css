@@ -1,15 +1,17 @@
-/* Illinois Answers / BGA color palette */
+/* Illinois Answers / BGA design system — tokens and rules per design.md.
+   Flat, square, high-contrast: navy structure, one gold accent, uppercase labels. */
 :root {
   --navy: #003282;
-  --navy-dark: #001464;
-  --navy-header: #003a63;
+  --navy-dark: #000a5a;
+  --link: #003a63;
   --gold: #fac346;
   --gold-dark: #d29b1e;
   --bg: #ffffff;
-  --bg-subtle: #f5f7fa;
+  --bg-subtle: #f3f5f6;
   --border: #dce1e9;
+  --hairline: rgba(0, 0, 0, 0.1);
   --text: #111111;
-  --text-muted: #4f5566;
+  --text-muted: #464b50;
 }
 
 * { box-sizing: border-box; }
@@ -26,30 +28,49 @@ button, input {
   font-family: inherit;
 }
 
-/* ── Header ─────────────────────────────────────────── */
+/* ── Header: white masthead, hairline rule, uppercase nav ── */
 header {
-  background: var(--navy-header);
-  color: #fff;
-  padding: 0.9rem 1.25rem;
-  border-bottom: 3px solid var(--gold);
+  background: #fff;
+  padding: 1.25rem 1.25rem 0;
+  border-bottom: 1px solid var(--hairline);
 }
 
-header h1 { margin: 0; font-size: 1.2rem; }
-.tagline { margin: 0.2rem 0 0; opacity: 0.78; font-size: 0.875rem; }
+header h1 {
+  margin: 0;
+  font-family: "DM Serif Display", Georgia, serif;
+  font-weight: 400;
+  font-size: 1.7rem;
+  letter-spacing: -0.01em;
+  color: var(--navy);
+}
+.tagline { margin: 0.15rem 0 0; color: var(--text-muted); font-size: 0.9rem; }
 
 /* ── Nav ─────────────────────────────────────────────── */
-nav { margin-top: 0.6rem; display: flex; flex-wrap: wrap; }
+nav { margin-top: 0.9rem; display: flex; flex-wrap: wrap; align-items: center; }
 nav a {
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--text);
   text-decoration: none;
-  font-size: 0.875rem;
-  padding-right: 0.9rem;
-  margin-right: 0.6rem;
-  border-right: 1px solid rgba(255, 255, 255, 0.2);
-  transition: color 0.12s;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 0 0.65rem;
+  margin-right: 1.5rem;
+  border-bottom: 3px solid transparent;
+  transition: color 150ms ease-in-out, border-color 150ms ease-in-out;
 }
-nav a:last-child { border-right: none; }
-nav a:hover { color: var(--gold); }
+nav a:hover { color: var(--navy); border-bottom-color: var(--gold); }
+nav a.nav-cta {
+  background: var(--gold);
+  color: var(--text);
+  padding: 0.55rem 1.1rem;
+  margin-left: auto;
+  margin-right: 0;
+  margin-bottom: 0.6rem;
+  border-bottom: none;
+  transition: background 150ms ease-in-out;
+}
+nav a.nav-cta:hover { background: var(--gold-dark); color: var(--text); }
 
 /* ── Layout ──────────────────────────────────────────── */
 main { max-width: 740px; margin: 0 auto; padding: 1.5rem 1rem; }
@@ -59,9 +80,9 @@ footer {
   padding: 1rem 1rem 2.5rem;
   font-size: 0.8rem;
   color: var(--text-muted);
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--hairline);
 }
-footer a { color: var(--navy); }
+footer a { color: var(--link); }
 
 /* ── Sections ────────────────────────────────────────── */
 section {
@@ -71,6 +92,16 @@ section {
   margin-bottom: 1rem;
 }
 section.hero { border-left: 4px solid var(--gold); }
+
+/* One serif display headline per page, IAP-style */
+.hero h2 {
+  font-family: "DM Serif Display", Georgia, serif;
+  font-weight: 400;
+  font-size: 1.75rem;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin-top: 0;
+}
 
 /* Signup/manage forms: no boxes — headings carry the hierarchy */
 form#signup-form section, form#manage-form section {
@@ -84,8 +115,10 @@ details.advanced { margin: 1.5rem 0; }
 details.advanced > summary {
   cursor: pointer;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   padding: 0.25rem 0;
 }
 details.advanced > summary:hover { color: var(--navy); }
@@ -95,7 +128,8 @@ details.advanced[open] > summary { margin-bottom: 0.5rem; }
 h2 { font-size: 1.15rem; margin-top: 1.25rem; margin-bottom: 0.4rem; color: var(--navy); }
 h3 { font-size: 1rem; margin-bottom: 0.5rem; }
 .hint { font-size: 0.85rem; color: var(--text-muted); }
-a { color: var(--navy); }
+a { color: var(--link); }
+a:hover { color: var(--navy); }
 
 /* ── Forms ───────────────────────────────────────────── */
 input[type="email"], input[type="search"] {
@@ -105,7 +139,7 @@ input[type="email"], input[type="search"] {
   font-size: 1rem;
   margin: 0.25rem 0;
   border-radius: 0;
-  transition: border-color 0.12s, box-shadow 0.12s;
+  transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
 }
 input[type="email"]:focus, input[type="search"]:focus {
   outline: none;
@@ -113,17 +147,19 @@ input[type="email"]:focus, input[type="search"]:focus {
   box-shadow: 0 0 0 2px rgba(0, 50, 130, 0.12);
 }
 
-/* Gold primary button — matches IAP CTA; requires dark text */
+/* Gold primary button — square, uppercase, dark text (never white on gold) */
 button {
   background: var(--gold);
   color: var(--text);
   border: 0;
   border-radius: 0;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
+  padding: 0.8rem 1.5rem;
+  font-size: 0.9rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background 150ms ease-in-out;
 }
 button:hover { background: var(--gold-dark); }
 button:disabled { opacity: 0.55; cursor: wait; }
@@ -141,7 +177,7 @@ button:disabled { opacity: 0.55; cursor: wait; }
 .committee-search { position: relative; }
 #committee-results {
   list-style: none; margin: 0; padding: 0;
-  border: 1px solid var(--border); border-top: none;
+  border: 1px solid var(--border); border-top: 2px solid var(--navy);
   background: #fff; max-height: 240px; overflow-y: auto;
 }
 #committee-results li { padding: 0.5rem 0.75rem; cursor: pointer; }
@@ -156,6 +192,7 @@ button:disabled { opacity: 0.55; cursor: wait; }
 #committee-chosen button.remove {
   background: none; padding: 0 0 0 0.4rem;
   font-size: 1rem; line-height: 1;
+  letter-spacing: 0; text-transform: none;
   color: rgba(255, 255, 255, 0.75); font-weight: normal;
 }
 #committee-chosen button.remove:hover { background: none; color: #fff; }
@@ -169,13 +206,13 @@ button:disabled { opacity: 0.55; cursor: wait; }
 table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
 th {
   background: var(--navy); color: #fff;
-  padding: 0.4rem 0.6rem; text-align: left;
-  font-size: 0.775rem; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 0.45rem 0.6rem; text-align: left;
+  font-size: 0.75rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.05em;
 }
 td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
 tr:last-child td { border-bottom: none; }
-.filings td a { color: var(--navy); font-weight: 500; }
+.filings td a { color: var(--link); font-weight: 500; }
 .nowrap { white-space: nowrap; }
 .scope-toggle { font-size: 0.875rem; margin-bottom: 0.5rem; }
 
@@ -185,19 +222,22 @@ tr:last-child td { border-bottom: none; }
 .btn {
   display: inline-block;
   background: var(--gold); color: var(--text);
-  padding: 0.65rem 1.5rem;
-  text-decoration: none; font-size: 0.95rem; font-weight: 600;
+  padding: 0.7rem 1.5rem;
+  text-decoration: none; font-size: 0.9rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.05em;
   border-radius: 0;
-  transition: background 0.12s;
+  transition: background 150ms ease-in-out;
 }
-.btn:hover { background: var(--gold-dark); }
+.btn:hover { background: var(--gold-dark); color: var(--text); }
 .btn-secondary { background: var(--navy); color: #fff; }
 .btn-secondary:hover { background: var(--navy-dark); color: #fff; }
 
 /* ── Inline text-style button (switch account) ───────── */
 button.linklike {
   background: none; border: 0; padding: 0; border-radius: 0;
-  color: var(--navy); text-decoration: underline;
-  font-size: inherit; font-weight: normal; cursor: pointer;
+  color: var(--link); text-decoration: underline;
+  font-size: inherit; font-weight: normal;
+  text-transform: none; letter-spacing: 0;
+  cursor: pointer;
 }
-button.linklike:hover { background: none; color: var(--navy-dark); }
+button.linklike:hover { background: none; color: var(--navy); }

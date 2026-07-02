@@ -6,22 +6,22 @@
   <title>{% block title %}{{ site_name }}{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&family=DM+Serif+Display&display=swap">
   <link rel="stylesheet" href="/static/style.css">
   <link rel="manifest" href="/static/manifest.json">
   <link rel="icon" href="/static/icon-192.png">
-  <meta name="theme-color" content="#003a63">
+  <meta name="theme-color" content="#ffffff">
   <link rel="apple-touch-icon" href="/static/icon-192.png">
 </head>
 <body>
   <header>
     <h1>{{ site_name }}</h1>
-    <p class="tagline">Real-time alerts when Illinois campaign finance reports are filed</p>
+    <p class="tagline">Get alerts when Illinois campaign finance reports are filed</p>
     <nav>
       <a href="/">Today's filings</a>
-      <a href="/subscribe">Sign up</a>
       <a href="/login" data-manage-link>Manage alerts</a>
       <a href="/install">Install the app</a>
+      <a href="/subscribe" class="nav-cta">Sign up</a>
     </nav>
   </header>
   <main>

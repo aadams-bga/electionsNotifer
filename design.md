@@ -6,8 +6,9 @@ stylesheets (Newspack theme + site custom CSS + Adobe Fonts kit) in July 2026, s
 these are the real brand tokens, not approximations.
 
 The aesthetic in one sentence: **a flat, square, high-contrast news brand — navy and
-gold on white, sans-serif UI with serif display headlines, uppercase labels, no
-rounded corners, no shadows, no gradients.**
+gold on white, all sans-serif, uppercase labels, no rounded corners, no shadows,
+no gradients.** (IAP's own site garnishes feature headlines with a serif display
+face; this project is deliberately 100% sans — see §2.)
 
 ---
 
@@ -49,19 +50,18 @@ to illinoisanswers.org — **cannot be hotlinked from other domains**):
 | **IvyPresto Display** | serif | Big feature headlines only (story titles, tight `letter-spacing: -0.01em`–`-0.02em`, `line-height: 1`) |
 | **IBM Plex Serif** | serif | Article excerpt paragraphs in story listings |
 
-Free substitutes for domains without the Adobe license (what this app does):
-
-| Brand font | Free stand-in (Google Fonts) |
-|---|---|
-| Halyard Display / Text | **Public Sans** (current app choice) — Libre Franklin also works |
-| IvyPresto Display | DM Serif Display or Playfair Display |
-| IBM Plex Serif | **IBM Plex Serif** (it's free — use the real thing) |
+**House rule for this project: everything is sans-serif.** One open font —
+**Public Sans** (Google Fonts, weights 400/600/700) — covers all roles: wordmark,
+headings, body, UI, labels. The serif faces above are documented only so you know
+what the mothership site uses; do not introduce serifs here. (Libre Franklin is an
+acceptable Public Sans alternate if ever needed.)
 
 Hierarchy recipe:
-- **UI and headings: the sans.** Weights 400 / 600 / 700 only; their body weight for
-  meta text is light (300), but 400 is fine when 300 isn't loaded.
-- **A serif display face is optional garnish** for one big headline per page at most
-  (hero title), tight letter-spacing, `line-height: 1`. Never for UI.
+- Weights 400 / 600 / 700 only; their body weight for meta text is light (300),
+  but 400 is fine when 300 isn't loaded.
+- **Display headlines are bold sans**: one big headline per page at most (hero
+  title / wordmark), weight 700, tight letter-spacing (`-0.01em`),
+  `line-height` ~1.1–1.15.
 - Their homepage type scale for story titles: 16 / 21 / 28 / 38 / 51 / 67 px.
   Theme sizes: small 16, normal 20, large 36, x-large 42.
 - Body copy ~16–20px, `line-height` ~1.4–1.55.

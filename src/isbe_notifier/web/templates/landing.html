@@ -1,15 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="hero">
-  <h2>Follow the money in Illinois elections</h2>
-  <p>This is a free notification service that watches the Illinois State Board of
-     Elections' public feed around the clock. The moment a campaign committee reports
-     a major contribution, an independent expenditure, or any other disclosure, we
-     send an alert by email or push notification — with every contribution and
-     expenditure itemized.</p>
-  <p>It was built for the <strong>2026 Chicago Public Schools Board races</strong>
-     (the citywide president's seat and all 20 district seats), but you can also
-     follow any Illinois committee — or every filing statewide.</p>
+  <h2>Never miss new information</h2>
+  <p>Campaign season for the Chicago Board of Education is underway and more people than ever are watching the 21 races 
+    to fill the board in a first-of-its-kind race.</p>
+  <p>Stay ahead of the pack with real-time notifications
+    the moment any campaign committee reports a major contribution, independent 
+    expenditure or any other campaign disclosure. </p>
+  <h2>How it works</h2>
+  <ul>
+    <li><strong>Set a custom profile</strong>: Use any email address to select the specific races you want to get notifications for</li>
+    <li><strong>Get real-time alerts</strong>: email and/or push notifications minutes after a report appears, including every itemized contribution and expenditure</li>
+    <li><strong>Catch up with daily and weekly summaries</strong>: digest emails that collect everything you follow in one message</li>
+  </ul>
   <p class="cta-row">
     <a class="btn" href="/subscribe">Sign up for alerts</a>
     <a class="btn btn-secondary" href="/login" data-manage-link>Manage my alerts</a>
@@ -57,21 +60,5 @@
   <p class="hint">Advanced:
     <a href="/?scope=all">see all of today's statewide filings ({{ total_count }}{% if capped %}+{% endif %})</a></p>
   {% endif %}
-</section>
-
-<section>
-  <h2>How it works</h2>
-  <ul>
-    <li><strong>Real-time alerts</strong> — email and/or push notifications minutes
-        after a report appears, including every itemized contribution and expenditure.</li>
-    <li><strong>Daily &amp; weekly summaries</strong> — optional digest emails that
-        collect everything you follow in one message.</li>
-    <li><strong>Race matching</strong> — independent expenditures are matched to CPS
-        races by the "Office – District" they target, no matter which committee
-        spends the money.</li>
-  </ul>
-  <p>Every alert links back to the original report on
-     <a href="https://elections.il.gov">elections.il.gov</a>. Unsubscribe anytime,
-     from any email.</p>
 </section>
 {% endblock %}

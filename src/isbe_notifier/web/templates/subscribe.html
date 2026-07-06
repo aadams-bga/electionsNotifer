@@ -5,7 +5,7 @@
     <h2>1. Which races do you want to follow?</h2>
     <label class="race all-cps">
       <input type="checkbox" id="all-cps"> <strong>All CPS Board races</strong> —
-      the president's race and every district, including any added later
+      the president's race and every district
     </label>
     <div class="race-grid">
       {% for race in races %}
@@ -19,15 +19,15 @@
   <section>
     <h2>2. What updates do you want?</h2>
     <label class="channel">
-      <input type="checkbox" id="realtime" checked> Real-time alerts — sent minutes
+      <input type="checkbox" id="realtime" checked> Real-time alerts: sent minutes
       after a report is filed
     </label>
     <label class="channel">
-      <input type="checkbox" id="daily-digest"> Daily summary — everything you follow,
-      one email each night
+      <input type="checkbox" id="daily-digest"> Daily summary: everything you follow,
+      one email each night at midnight
     </label>
     <label class="channel">
-      <input type="checkbox" id="weekly-digest"> Weekly summary — the same, every Sunday night
+      <input type="checkbox" id="weekly-digest"> Weekly summary: everything you follow, every Sunday night at midnight
     </label>
   </section>
 
@@ -43,8 +43,8 @@
     </label>
     <p class="hint">Daily and weekly summaries always arrive by email. On iPhone/iPad,
       push only works after you <a href="/install">install the app</a> to your home
-      screen; on Android and desktop it works right in the browser.</p>
-    <p class="hint" id="ios-hint" hidden>⚠️ You're on an iPhone/iPad browser tab —
+      screen. On Android and desktop it works in the browser or as an installed app.</p>
+    <p class="hint" id="ios-hint" hidden>You're on an iPhone/iPad browser tab —
       <a href="/install">install the app first</a> or push won't be delivered.</p>
   </section>
 
@@ -52,10 +52,10 @@
     <summary>Advanced options</summary>
     <h3>Follow everything statewide</h3>
     <label class="race firehose">
-      <input type="checkbox" id="all-filings"> <strong>The firehose</strong> — every report
+      <input type="checkbox" id="all-filings"> <strong>The firehose</strong>: every report
       filed with the State Board of Elections, statewide
     </label>
-    <p class="hint">⚠️ High volume: often hundreds of filings per day near quarterly
+    <p class="hint">Warning: this can be hundreds of filings per day near quarterly
       deadlines. Best with push notifications or a filtered inbox.</p>
 
     <h3>Follow any Illinois committee</h3>

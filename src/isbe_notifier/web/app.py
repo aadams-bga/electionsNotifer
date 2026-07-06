@@ -158,6 +158,13 @@ def subscribe_page(request: Request):
         )
 
 
+@app.get("/about", response_class=HTMLResponse)
+def about_page(request: Request):
+    return templates.TemplateResponse(
+        request, "about.html", {"site_name": get_settings().site_name}
+    )
+
+
 @app.get("/install", response_class=HTMLResponse)
 def install_page(request: Request):
     return templates.TemplateResponse(

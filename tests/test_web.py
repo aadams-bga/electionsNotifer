@@ -49,7 +49,7 @@ def test_landing_renders(client):
     resp = client.get("/")
     assert resp.status_code == 200
     assert "Today's reports" in resp.text
-    assert "Sign up for alerts" in resp.text
+    assert "Sign up" in resp.text  # nav CTA; the full ad lives on /about now
     # empty state links to the statewide view
     assert "No reports tied to a CPS Board race yet today" in resp.text
     # statewide view is demoted to an Advanced link below the CPS table
@@ -89,6 +89,15 @@ def test_landing_shows_todays_filings(client):
     resp = client.get("/?scope=all")
     assert "Friends of Now" in resp.text
     assert "Statewide Stray" in resp.text
+
+
+def test_about_page_renders(client):
+    resp = client.get("/about")
+    assert resp.status_code == 200
+    assert "Sign up for alerts" in resp.text
+    assert "How it works" in resp.text
+    # the ad no longer lives on the landing page
+    assert "How it works" not in client.get("/").text
 
 
 def test_install_page_renders(client):

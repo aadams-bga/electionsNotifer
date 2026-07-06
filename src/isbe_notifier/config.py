@@ -22,7 +22,7 @@ class Settings(BaseSettings):
 
     # Public base URL of the web app, used in email links and push payloads.
     base_url: str = "http://localhost:8000"
-    site_name: str = "Campagin Disclosure Alerts"
+    site_name: str = "Campaign Disclosure Alerts"
 
     # Poller
     rss_url: str = "https://elections.il.gov/rss/LatestReportsFiled.aspx"

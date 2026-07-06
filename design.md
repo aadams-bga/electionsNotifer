@@ -92,7 +92,10 @@ white, **gold when sitting on a photo or navy background**.
   menus: `2px 2px 12px rgba(0,0,0,0.25)`).
 - Hairline borders: `1px solid rgba(0,0,0,0.1)` (header bottom) or a light gray.
   Accents are chunkier: `2px solid #003282` (menu toggles, dropdown top edges),
-  or a 3–4px gold bar as a section/header accent.
+  or a 3px gold rule along the **bottom** of the site header.
+- **NEVER use left-edge accent bars** (`border-left` highlights on boxes, hero
+  sections, callouts, error messages — any of it). This is a hard rule. Boxes get
+  a uniform border or none; emphasis comes from color, weight, and spacing.
 - Generous white space; the page is white with content doing the work.
 
 ## 4. Components
@@ -118,9 +121,8 @@ uppercase letter-spaced text; hairline row borders; no zebra striping.
 
 **Chips/tags** — navy background, white text, square corners.
 
-**Panels/sections** — white with a 1px `#dce1e9`-ish border; a hero section earns a
-4px gold left border. Forms drop the boxes entirely and let headings carry
-structure.
+**Panels/sections** — white with a uniform 1px `#dce1e9`-ish border (no accent
+edges). Forms drop the boxes entirely and let headings carry structure.
 
 ## 5. Motion
 
@@ -158,4 +160,5 @@ letter-spaced labels, square corners, hairline borders, real white space.
 
 **Don't**: rounded corners, shadows, gradients, white text on gold, more than two
 typefaces per page, colored backgrounds behind body copy, decorative animation,
-off-palette colors.
+off-palette colors, and — never, ever — left-edge accent bars on boxes
+(`border-left` highlights on heroes, callouts, or errors).

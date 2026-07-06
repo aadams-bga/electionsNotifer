@@ -90,7 +90,6 @@ section {
   padding: 1.25rem;
   margin-bottom: 1rem;
 }
-section.hero { border-left: 4px solid var(--gold); }
 
 /* One big display headline per page — bold sans, tight leading */
 .hero h2 {
@@ -197,7 +196,7 @@ button:disabled { opacity: 0.55; cursor: wait; }
 
 /* ── Messages ────────────────────────────────────────── */
 .message { font-size: 1.05rem; background: #fff; border: 1px solid var(--border); padding: 1.25rem; }
-.message.error { border-color: #c0392b; border-left: 4px solid #c0392b; }
+.message.error { border-color: #c0392b; }
 #form-status { min-height: 1.5rem; font-weight: 600; }
 
 /* ── Filings table ───────────────────────────────────── */

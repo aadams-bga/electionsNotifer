@@ -57,10 +57,9 @@ nav a {
   font-weight: 600;
   padding: 0.55rem 0 0.65rem;
   margin-right: 1.5rem;
-  border-bottom: 3px solid transparent;
-  transition: color 150ms ease-in-out, border-color 150ms ease-in-out;
+  transition: color 150ms ease-in-out;
 }
-nav a:hover { color: var(--gold); border-bottom-color: var(--gold); }
+nav a:hover { color: var(--gold); }
 nav a.nav-cta {
   background: var(--gold);
   color: var(--text);

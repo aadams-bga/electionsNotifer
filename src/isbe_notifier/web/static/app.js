@@ -173,6 +173,15 @@
       submitBtn.disabled = false;
       return;
     }
+    // Consent checkboxes exist only on signup; manage ignores these fields.
+    const termsChk = document.getElementById("accept-terms");
+    if (termsChk && !termsChk.checked) {
+      statusEl.textContent =
+        "Please agree to the Terms of Service and Privacy Policy to sign up.";
+      submitBtn.disabled = false;
+      return;
+    }
+    const marketingChk = document.getElementById("marketing-opt-in");
     const allFilings = document.getElementById("all-filings");
     const allCps = document.getElementById("all-cps");
     const dailyDigest = dailyChk;
@@ -188,6 +197,8 @@
       all_cps: !!(allCps && allCps.checked),
       wants_daily_digest: !!(dailyDigest && dailyDigest.checked),
       wants_weekly_digest: !!(weeklyDigest && weeklyDigest.checked),
+      accepts_terms: !!(termsChk && termsChk.checked),
+      marketing_opt_in: !!(marketingChk && marketingChk.checked),
     };
 
     try {

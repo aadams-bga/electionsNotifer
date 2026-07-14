@@ -121,6 +121,7 @@ def test_subscribe_page_renders(client):
 
 def test_login_flow(client):
     client.post("/api/subscribe", json={
+        "accepts_terms": True,
         "email": "login@example.org", "wants_email": True, "race_slugs": ["d1a"],
     })
     client.sent_emails.clear()
@@ -145,6 +146,7 @@ def test_login_flow(client):
 
 def test_all_cps_and_digest_signup(client):
     resp = client.post("/api/subscribe", json={
+        "accepts_terms": True,
         "email": "cps@example.org", "wants_email": True, "all_cps": True,
         "wants_daily_digest": True, "wants_weekly_digest": True,
     })
@@ -158,6 +160,7 @@ def test_all_cps_and_digest_signup(client):
 
     # digest flags require an email address
     assert client.post("/api/subscribe", json={
+        "accepts_terms": True,
         "wants_push": True, "race_slugs": ["d1a"], "wants_daily_digest": True,
     }).status_code == 400
 
@@ -165,6 +168,7 @@ def test_all_cps_and_digest_signup(client):
 def test_digest_only_signup(client):
     """Daily/weekly summaries are valid without real-time alerts."""
     resp = client.post("/api/subscribe", json={
+        "accepts_terms": True,
         "email": "digest-only@example.org", "race_slugs": ["d1a"],
         "wants_daily_digest": True,
     })
@@ -177,12 +181,14 @@ def test_digest_only_signup(client):
 
     # but picking no cadence at all is still rejected
     assert client.post("/api/subscribe", json={
+        "accepts_terms": True,
         "email": "nothing@example.org", "race_slugs": ["d1a"],
     }).status_code == 400
 
 
 def test_manage_updates_flags_and_digests(client):
     client.post("/api/subscribe", json={
+        "accepts_terms": True,
         "email": "flags@example.org", "wants_email": True, "all_cps": True,
         "wants_daily_digest": True,
     })
@@ -208,6 +214,7 @@ def test_manage_updates_flags_and_digests(client):
 
 def test_signup_verify_flow(client):
     resp = client.post("/api/subscribe", json={
+        "accepts_terms": True,
         "email": "reader@example.org",
         "wants_email": True,
         "race_slugs": ["president", "d4a"],
@@ -233,17 +240,51 @@ def test_signup_verify_flow(client):
         assert len(sub.subscriptions) == 3
 
 
+def test_terms_and_marketing(client):
+    # Signup without accepting the terms is rejected
+    resp = client.post("/api/subscribe", json={
+        "email": "noterms@example.org", "wants_email": True, "race_slugs": ["d1a"],
+    })
+    assert resp.status_code == 400
+    assert "terms" in resp.json()["detail"].lower()
+
+    # Accepting terms records a timestamp; marketing opt-in is stored
+    resp = client.post("/api/subscribe", json={
+        "accepts_terms": True, "marketing_opt_in": True,
+        "email": "consent@example.org", "wants_email": True, "race_slugs": ["d1a"],
+    })
+    assert resp.status_code == 200
+    with db.session_scope() as s:
+        subscriber = s.scalars(select(Subscriber)).one()
+        assert subscriber.terms_accepted_at is not None
+        assert subscriber.marketing_opt_in is True
+
+    # Marketing defaults to off and is never un-set by a later signup
+    resp = client.post("/api/subscribe", json={
+        "accepts_terms": True,
+        "email": "consent@example.org", "wants_email": True, "race_slugs": ["d2a"],
+    })
+    assert resp.status_code == 200
+    with db.session_scope() as s:
+        subscriber = s.scalars(select(Subscriber)).one()
+        assert subscriber.marketing_opt_in is True
+
+
 def test_signup_validation(client):
     assert client.post("/api/subscribe", json={
+        "accepts_terms": True,
         "wants_email": True, "race_slugs": ["president"],
     }).status_code == 400  # email channel without address
     assert client.post("/api/subscribe", json={
+        "accepts_terms": True,
         "email": "x@example.org", "wants_email": True, "race_slugs": [],
     }).status_code == 400  # nothing followed
     assert client.post("/api/subscribe", json={
+        "accepts_terms": True,
         "email": "x@example.org", "wants_email": True, "race_slugs": ["not-a-race"],
     }).status_code == 400
     assert client.post("/api/subscribe", json={
+        "accepts_terms": True,
         "email": "not-an-email", "wants_email": True, "race_slugs": ["president"],
     }).status_code == 422
 
@@ -251,6 +292,7 @@ def test_signup_validation(client):
 def test_signup_idempotent_for_existing_email(client):
     for _ in range(2):
         resp = client.post("/api/subscribe", json={
+        "accepts_terms": True,
             "email": "again@example.org", "wants_email": True, "race_slugs": ["d1a"],
         })
         assert resp.status_code == 200
@@ -261,6 +303,7 @@ def test_signup_idempotent_for_existing_email(client):
 
 def test_manage_and_unsubscribe(client):
     client.post("/api/subscribe", json={
+        "accepts_terms": True,
         "email": "m@example.org", "wants_email": True, "race_slugs": ["d2a", "d2b"],
     })
     with db.session_scope() as s:
@@ -299,6 +342,7 @@ def test_push_and_digest_sends_verification(client):
     """Push-only real-time + digest email: providing an email for digests must trigger
     verification even though the email channel itself isn't checked."""
     resp = client.post("/api/subscribe", json={
+        "accepts_terms": True,
         "wants_push": True,
         "wants_email": False,
         "email": "pusher@example.org",
@@ -315,6 +359,7 @@ def test_push_and_digest_sends_verification(client):
 
 def test_push_only_signup(client):
     resp = client.post("/api/subscribe", json={
+        "accepts_terms": True,
         "wants_push": True, "race_slugs": ["d7a"],
     })
     assert resp.status_code == 200
@@ -348,6 +393,7 @@ def test_admin_requires_token(client):
 
 def test_firehose_signup(client):
     resp = client.post("/api/subscribe", json={
+        "accepts_terms": True,
         "email": "hose@example.org", "wants_email": True, "all_filings": True,
     })
     assert resp.status_code == 200

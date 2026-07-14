@@ -157,6 +157,10 @@ class Subscriber(Base):
     # Opt-in summary emails (require a verified email; real-time alerts unaffected).
     wants_daily_digest: Mapped[bool] = mapped_column(Boolean, default=False)
     wants_weekly_digest: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Consent captured at signup. Null terms_accepted_at = beta-era subscriber
+    # who predates the checkbox (grandfathered).
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    marketing_opt_in: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     subscriptions: Mapped[list["Subscription"]] = relationship(

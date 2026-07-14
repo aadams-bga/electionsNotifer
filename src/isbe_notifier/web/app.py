@@ -235,11 +235,15 @@ class SubscribeRequest(BaseModel):
     all_cps: bool = False
     wants_daily_digest: bool = False
     wants_weekly_digest: bool = False
+    accepts_terms: bool = False
+    marketing_opt_in: bool = False
 
 
 @app.post("/api/subscribe")
 @limiter.limit("10/hour")
 def subscribe(request: Request, payload: SubscribeRequest):
+    if not payload.accepts_terms:
+        raise HTTPException(400, "Please agree to the terms of service to sign up.")
     if payload.wants_email and not payload.email:
         raise HTTPException(400, "Email address required for email notifications.")
     if (payload.wants_daily_digest or payload.wants_weekly_digest) and not payload.email:
@@ -322,6 +326,9 @@ def subscribe(request: Request, payload: SubscribeRequest):
             subscriber.wants_weekly_digest = (
                 subscriber.wants_weekly_digest or payload.wants_weekly_digest
             )
+        if subscriber.terms_accepted_at is None:
+            subscriber.terms_accepted_at = utcnow()
+        subscriber.marketing_opt_in = subscriber.marketing_opt_in or payload.marketing_opt_in
 
         subscriber_id = subscriber.id
         if needs_verification:

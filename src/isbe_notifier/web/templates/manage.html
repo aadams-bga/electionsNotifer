@@ -28,6 +28,18 @@
       <input type="checkbox" id="realtime" {% if wants_email or wants_push %}checked{% endif %}>
       Real-time alerts: sent minutes after a report is filed
     </label>
+    <div class="nested" id="realtime-options">
+      <label class="channel">
+        <input type="checkbox" id="wants-email" {% if wants_email %}checked{% endif %}
+               {% if not email %}disabled data-locked="1"{% endif %}> By email
+      </label>
+      <label class="channel">
+        <input type="checkbox" id="wants-push" {% if wants_push %}checked{% endif %}>
+        By push notification on this device
+      </label>
+      <p class="hint">On iPhone/iPad, push only works by
+        <a href="/install">installing this website app</a>. On Android, it also works directly in-browser</p>
+    </div>
     <label class="channel">
       <input type="checkbox" id="daily-digest" {% if wants_daily_digest %}checked{% endif %}
              {% if not email %}disabled{% endif %}> Daily summary: everything you follow in
@@ -38,22 +50,11 @@
              {% if not email %}disabled{% endif %}> Weekly summary: everything you follow, every Sunday night at midnight
     </label>
     {% if not email %}
-    <p class="hint">Summary emails require an email address on your subscription.</p>
+    <p class="hint">Summary emails and email alerts require an email address on your
+      subscription.</p>
+    {% else %}
+    <p class="hint">Daily and weekly summaries always arrive by email.</p>
     {% endif %}
-  </section>
-
-  <section>
-    <h3>How should we reach you?</h3>
-    <label class="channel">
-      <input type="checkbox" id="wants-email" {% if wants_email %}checked{% endif %}
-             {% if not email %}disabled{% endif %}> Real-time alerts by email
-    </label>
-    <label class="channel">
-      <input type="checkbox" id="wants-push" {% if wants_push %}checked{% endif %}>
-      Real-time alerts by push notification on this device
-    </label>
-    <p class="hint">On iPhone/iPad, push only works by
-      <a href="/install">installing this website app</a>. On Android, it also works directly in-browser</p>
   </section>
 
   <details class="advanced" {% if all_filings or followed_committees %}open{% endif %}>
@@ -81,4 +82,4 @@
   <p id="form-status" role="status"></p>
 </form>
 {% endblock %}
-{% block scripts %}<script src="/static/app.js"></script>{% endblock %}
+{% block scripts %}<script src="/static/app.js?v=2"></script>{% endblock %}

@@ -28,6 +28,30 @@
     window.navigator.standalone === true;
   if (iosHint && isIos && !isStandalone) iosHint.hidden = false;
 
+  // --- update-cadence UI: channels nest under real-time; email field appears
+  // only when something email-based is selected ---
+  const realtimeChk = document.getElementById("realtime");
+  const emailChk = document.getElementById("wants-email");
+  const pushChk = document.getElementById("wants-push");
+  const dailyChk = document.getElementById("daily-digest");
+  const weeklyChk = document.getElementById("weekly-digest");
+  const realtimeNest = document.getElementById("realtime-options");
+  const emailSection = document.getElementById("email-section");
+
+  function updateCadenceUI() {
+    const rt = realtimeChk.checked;
+    emailChk.disabled = !rt || emailChk.dataset.locked === "1";
+    pushChk.disabled = !rt;
+    if (realtimeNest) realtimeNest.classList.toggle("disabled", !rt);
+    if (emailSection) {
+      emailSection.hidden = !((rt && emailChk.checked) || dailyChk.checked || weeklyChk.checked);
+    }
+  }
+  [realtimeChk, emailChk, dailyChk, weeklyChk].forEach((el) => {
+    if (el) el.addEventListener("change", updateCadenceUI);
+  });
+  updateCadenceUI();
+
   // --- committee search ---
   const q = document.getElementById("committee-q");
   const results = document.getElementById("committee-results");
@@ -124,23 +148,35 @@
 
     // Email/push checkboxes are delivery methods for real-time alerts; with
     // real-time off, digests are the only sends and they're always email.
-    const realtime = document.getElementById("realtime");
-    const realtimeOn = !realtime || realtime.checked;
-    const emailChannel = document.getElementById("wants-email").checked;
-    const pushChannel = document.getElementById("wants-push").checked;
+    const realtimeOn = realtimeChk.checked;
+    const emailChannel = emailChk.checked;
+    const pushChannel = pushChk.checked;
+    const digestOn = dailyChk.checked || weeklyChk.checked;
+    if (!realtimeOn && !digestOn) {
+      statusEl.textContent =
+        "Choose real-time alerts, a daily summary, or a weekly summary.";
+      submitBtn.disabled = false;
+      return;
+    }
     if (realtimeOn && !emailChannel && !pushChannel) {
       statusEl.textContent =
-        "Real-time alerts need a delivery method — check email or push notifications below.";
+        "Real-time alerts need a delivery method — check email or push notifications.";
       submitBtn.disabled = false;
       return;
     }
     const wantsEmail = realtimeOn && emailChannel;
     const wantsPush = realtimeOn && pushChannel;
     const emailInput = document.getElementById("email");
+    if ((wantsEmail || digestOn) && emailInput && !emailInput.value.trim()) {
+      statusEl.textContent =
+        "Enter your email address — it's needed for email alerts and summaries.";
+      submitBtn.disabled = false;
+      return;
+    }
     const allFilings = document.getElementById("all-filings");
     const allCps = document.getElementById("all-cps");
-    const dailyDigest = document.getElementById("daily-digest");
-    const weeklyDigest = document.getElementById("weekly-digest");
+    const dailyDigest = dailyChk;
+    const weeklyDigest = weeklyChk;
     const payload = {
       email: emailInput && emailInput.value ? emailInput.value : null,
       wants_email: wantsEmail,

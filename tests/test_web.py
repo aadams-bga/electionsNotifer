@@ -162,6 +162,25 @@ def test_all_cps_and_digest_signup(client):
     }).status_code == 400
 
 
+def test_digest_only_signup(client):
+    """Daily/weekly summaries are valid without real-time alerts."""
+    resp = client.post("/api/subscribe", json={
+        "email": "digest-only@example.org", "race_slugs": ["d1a"],
+        "wants_daily_digest": True,
+    })
+    assert resp.status_code == 200, resp.text
+    with db.session_scope() as s:
+        subscriber = s.scalars(select(Subscriber)).one()
+        assert subscriber.wants_daily_digest is True
+        sub = s.scalars(select(Subscription)).one()
+        assert sub.wants_email is False and sub.wants_push is False
+
+    # but picking no cadence at all is still rejected
+    assert client.post("/api/subscribe", json={
+        "email": "nothing@example.org", "race_slugs": ["d1a"],
+    }).status_code == 400
+
+
 def test_manage_updates_flags_and_digests(client):
     client.post("/api/subscribe", json={
         "email": "flags@example.org", "wants_email": True, "all_cps": True,

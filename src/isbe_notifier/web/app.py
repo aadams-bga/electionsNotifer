@@ -244,8 +244,13 @@ def subscribe(request: Request, payload: SubscribeRequest):
         raise HTTPException(400, "Email address required for email notifications.")
     if (payload.wants_daily_digest or payload.wants_weekly_digest) and not payload.email:
         raise HTTPException(400, "Email address required for summary emails.")
-    if not payload.wants_email and not payload.wants_push:
-        raise HTTPException(400, "Choose email notifications, push notifications, or both.")
+    if not (
+        payload.wants_email
+        or payload.wants_push
+        or payload.wants_daily_digest
+        or payload.wants_weekly_digest
+    ):
+        raise HTTPException(400, "Choose real-time alerts, a daily summary, or a weekly summary.")
     if not (
         payload.race_slugs or payload.committee_ids or payload.all_filings or payload.all_cps
     ):

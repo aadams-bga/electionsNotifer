@@ -19,9 +19,23 @@
   <section>
     <h2>2. What updates do you want?</h2>
     <label class="channel">
-      <input type="checkbox" id="realtime" checked> Real-time alerts: sent minutes
+      <input type="checkbox" id="realtime"> Real-time alerts: sent minutes
       after a report is filed
     </label>
+    <div class="nested disabled" id="realtime-options">
+      <label class="channel">
+        <input type="checkbox" id="wants-email" disabled> By email
+      </label>
+      <label class="channel">
+        <input type="checkbox" id="wants-push" disabled> By push notification
+        on this device
+      </label>
+      <p class="hint">On iPhone/iPad, push only works after you
+        <a href="/install">install the app</a> to your home screen. On Android and
+        desktop it works in the browser or as an installed app.</p>
+      <p class="hint" id="ios-hint" hidden>You're on an iPhone/iPad browser tab —
+        <a href="/install">install the app first</a> or push won't be delivered.</p>
+    </div>
     <label class="channel">
       <input type="checkbox" id="daily-digest"> Daily summary: everything you follow,
       one email each night at midnight
@@ -29,23 +43,12 @@
     <label class="channel">
       <input type="checkbox" id="weekly-digest"> Weekly summary: everything you follow, every Sunday night at midnight
     </label>
+    <p class="hint">Daily and weekly summaries always arrive by email.</p>
   </section>
 
-  <section>
-    <h2>3. How should we reach you?</h2>
+  <section id="email-section" hidden>
+    <h2>3. Your email address</h2>
     <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
-    <label class="channel">
-      <input type="checkbox" id="wants-email" checked> Real-time alerts by email
-    </label>
-    <label class="channel">
-      <input type="checkbox" id="wants-push"> Real-time alerts by push notification
-      on this device
-    </label>
-    <p class="hint">Daily and weekly summaries always arrive by email. On iPhone/iPad,
-      push only works after you <a href="/install">install the app</a> to your home
-      screen. On Android and desktop it works in the browser or as an installed app.</p>
-    <p class="hint" id="ios-hint" hidden>You're on an iPhone/iPad browser tab —
-      <a href="/install">install the app first</a> or push won't be delivered.</p>
   </section>
 
   <details class="advanced">
@@ -71,4 +74,4 @@
   <p id="form-status" role="status"></p>
 </form>
 {% endblock %}
-{% block scripts %}<script src="/static/app.js"></script>{% endblock %}
+{% block scripts %}<script src="/static/app.js?v=2"></script>{% endblock %}

@@ -58,8 +58,12 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "same-origin"
     response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'"
+        "default-src 'self'; img-src 'self' data:; "
+        "style-src 'self' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; script-src 'self'"
     )
+    if get_settings().base_url.startswith("https://"):
+        response.headers["Strict-Transport-Security"] = "max-age=31536000"
     return response
 
 

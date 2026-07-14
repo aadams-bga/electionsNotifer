@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&display=swap">
-  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/style.css?v=4">
   <link rel="manifest" href="/static/manifest.json">
   <link rel="icon" href="/static/icon-192.png?v=3">
   <meta name="theme-color" content="#003a63">
@@ -15,7 +15,12 @@
 </head>
 <body>
   <header>
-    <h1>{{ site_name }}</h1>
+    <h1>
+      <a href="https://illinoisanswers.org/" class="logo-link">
+        <img src="/static/iap-logo.png?v=1" alt="Illinois Answers Project" class="logo">
+      </a>
+      <span class="visually-hidden">{{ site_name }}</span>
+    </h1>
     <p class="tagline"></p>
     <nav>
       <a href="/">Today's filings</a>

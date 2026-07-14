@@ -39,10 +39,21 @@ header {
 
 header h1 {
   margin: 0;
-  font-weight: 700;
-  font-size: 1.55rem;
-  letter-spacing: -0.01em;
-  color: #fff;
+  line-height: 0;
+}
+.logo-link { display: inline-block; }
+header img.logo {
+  height: 52px;
+  width: auto;
+  display: block;
+}
+/* Screen-reader-only text: keeps the site name in the page outline */
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 .tagline { margin: 0.15rem 0 0; color: rgba(255, 255, 255, 0.78); font-size: 0.9rem; }
 

@@ -42,9 +42,9 @@ def sent_emails(monkeypatch):
     return sent
 
 
-TODAY = date(2026, 6, 12)  # a Friday, used as the 11pm-Central digest boundary
-# 10am Central on June 12 — inside the daily window (June 11 11pm → June 12 11pm)
-FILED_UTC = datetime(2026, 6, 12, 15, 0, tzinfo=UTC)
+TODAY = date(2026, 6, 12)  # a Friday, used as the midnight-Central digest boundary
+# 10am Central on June 11 — inside the daily window (June 11 midnight → June 12 midnight)
+FILED_UTC = datetime(2026, 6, 11, 15, 0, tzinfo=UTC)
 
 
 def _seed_world(s):
@@ -112,29 +112,28 @@ def _subscriber(s, email, *, races=(), committees=(), all_cps=False, all_filings
 
 def test_period_for():
     assert digest.period_for("daily", TODAY) == (TODAY - timedelta(days=1), TODAY)
-    # Friday boundary → the week ending the most recent Sunday boundary
+    # Friday boundary → the Monday-to-Monday week ending the most recent
+    # Monday-midnight boundary
     start, end = digest.period_for("weekly", TODAY)
-    assert start == date(2026, 5, 31) and end == date(2026, 6, 7)
-    assert start.weekday() == 6 and end.weekday() == 6
-    # Fired exactly on the Sunday boundary → the week just ended
-    sunday = date(2026, 6, 14)
-    assert digest.period_for("weekly", sunday) == (date(2026, 6, 7), sunday)
+    assert start == date(2026, 6, 1) and end == date(2026, 6, 8)
+    assert start.weekday() == 0 and end.weekday() == 0
+    # Fired exactly on the Monday boundary (Sunday night) → the week just ended
+    monday = date(2026, 6, 15)
+    assert digest.period_for("weekly", monday) == (date(2026, 6, 8), monday)
 
 
 def test_latest_boundary():
     central = digest.CENTRAL
-    # Before 11pm → yesterday's boundary; at/after 11pm → today's
-    assert digest.latest_boundary(datetime(2026, 6, 12, 22, 59, tzinfo=central)) == date(
-        2026, 6, 11
-    )
-    assert digest.latest_boundary(datetime(2026, 6, 12, 23, 0, tzinfo=central)) == TODAY
+    # Today's midnight has always passed → the boundary is always today's date
+    assert digest.latest_boundary(datetime(2026, 6, 12, 0, 0, tzinfo=central)) == TODAY
+    assert digest.latest_boundary(datetime(2026, 6, 12, 22, 59, tzinfo=central)) == TODAY
 
 
-def test_window_is_11pm_to_11pm():
+def test_window_is_midnight_to_midnight():
     lo, hi = digest._bounds_utc(TODAY - timedelta(days=1), TODAY)
-    # June 11 11pm CDT = June 12 04:00 UTC; June 12 11pm CDT = June 13 04:00 UTC
-    assert lo == datetime(2026, 6, 12, 4, 0, tzinfo=UTC)
-    assert hi == datetime(2026, 6, 13, 4, 0, tzinfo=UTC)
+    # June 11 midnight CDT = June 11 05:00 UTC; June 12 midnight CDT = June 12 05:00 UTC
+    assert lo == datetime(2026, 6, 11, 5, 0, tzinfo=UTC)
+    assert hi == datetime(2026, 6, 12, 5, 0, tzinfo=UTC)
 
 
 def test_daily_digest_sections_and_scopes(dbsession, sent_emails):
@@ -266,6 +265,31 @@ def test_send_email_html_multipart(monkeypatch):
     html = msg.get_body(preferencelist=("html",)).get_content()
     assert "text body" in text and "Unsubscribe" in text
     assert "<strong>bold</strong>" in html and "Unsubscribe" in html
+    assert "Questions? Email aadams@bettergov.org" in text
+    assert 'mailto:aadams@bettergov.org' in html
+
+
+def test_send_email_without_html_gets_generated_part(monkeypatch):
+    """Emails composed as plain text (real-time alerts, sign-in) still get an
+    HTML alternative with clickable footer links and linkified body URLs."""
+    from isbe_notifier.notify import emailer
+
+    captured = {}
+    monkeypatch.setattr(emailer, "get_email_backend",
+                        lambda: type("B", (), {"send": lambda self, m: captured.update(msg=m)})())
+    emailer.send_email(
+        "x@example.org", "Subj",
+        "Use this link:\n\nhttps://example.test/manage?token=a&b=c",
+        "https://example.test/filing/1", 1,
+    )
+    msg = captured["msg"]
+    assert msg.get_content_type() == "multipart/alternative"
+    html = msg.get_body(preferencelist=("html",)).get_content()
+    assert '<a href="https://example.test/manage?token=a&amp;b=c">' in html
+    assert ">Unsubscribe from all alerts</a>" in html
+    assert '<a href="https://example.test/filing/1">View the filing</a>' in html
+    text = msg.get_body(preferencelist=("plain",)).get_content()
+    assert "View the filing: https://example.test/filing/1" in text
 
 
 def test_unverified_or_optout_excluded(dbsession, sent_emails):

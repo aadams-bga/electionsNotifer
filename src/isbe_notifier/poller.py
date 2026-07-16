@@ -318,14 +318,14 @@ def poll_once(client: httpx.Client) -> int:
 
 
 COMMITTEE_SYNC_INTERVAL = 60 * 60 * 24
-# If the poller was down at the 11pm boundary, still send the digest as long as
-# we come back within this many hours (i.e. until 7am Central).
+# If the poller was down at the midnight boundary, still send the digest as
+# long as we come back within this many hours (i.e. until 8am Central).
 DIGEST_CATCHUP_HOURS = 8
 
 
 def maybe_run_digests(last_run: dict) -> None:
-    """Fire digest runs once per 11pm-Central boundary. run_digest itself is
-    idempotent (digest_sends unique key), so a restart can't double-send."""
+    """Fire digest runs once per midnight-Central boundary. run_digest itself
+    is idempotent (digest_sends unique key), so a restart can't double-send."""
     from .notify.digest import BOUNDARY_HOUR_CENTRAL, CENTRAL, latest_boundary, run_digest
 
     now_ct = dt.datetime.now(CENTRAL)
@@ -341,7 +341,8 @@ def maybe_run_digests(last_run: dict) -> None:
             run_digest("daily", boundary)
         except Exception:  # noqa: BLE001 — digests must not stop polling
             logger.exception("daily digest run failed")
-    if boundary.weekday() == 6 and last_run.get("weekly") != boundary:  # Sunday 11pm
+    # The midnight ending Sunday is the boundary dated Monday (weekday 0).
+    if boundary.weekday() == 0 and last_run.get("weekly") != boundary:
         last_run["weekly"] = boundary
         try:
             run_digest("weekly", boundary)

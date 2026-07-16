@@ -33,26 +33,29 @@ logger = logging.getLogger(__name__)
 
 CENTRAL = ZoneInfo("America/Chicago")
 
-# Digests go out at 11pm Central, each covering the 24h (or 7 days) ending at
-# that boundary — so the daily digest summarizes the day that is just ending.
-BOUNDARY_HOUR_CENTRAL = 23
+# Digests go out at midnight Central, each covering the 24h (or 7 days) ending
+# at that boundary — so the daily digest summarizes the calendar day that just
+# ended. A boundary date's moment is 00:00 Central at the START of that date.
+BOUNDARY_HOUR_CENTRAL = 0
 
 
 def latest_boundary(now_ct: datetime) -> date:
-    """The date of the most recent 11pm-Central boundary that has passed."""
+    """The date of the most recent midnight-Central boundary that has passed
+    (i.e. today — today's midnight is always behind us)."""
     d = now_ct.date()
     return d if now_ct.hour >= BOUNDARY_HOUR_CENTRAL else d - timedelta(days=1)
 
 
 def period_for(kind: str, boundary: date) -> tuple[date, date]:
-    """(start, end) boundary dates; the covered window is start@11pm → end@11pm
-    Central. Daily ends at `boundary`; weekly covers the week ending the most
-    recent Sunday boundary."""
+    """(start, end) boundary dates; the covered window is start@midnight →
+    end@midnight Central. Daily ends at `boundary` and covers the previous
+    calendar day; weekly covers the Monday-through-Sunday week ending at the
+    most recent Monday-midnight boundary."""
     if kind == "daily":
         return boundary - timedelta(days=1), boundary
     if kind == "weekly":
-        last_sunday = boundary - timedelta(days=(boundary.weekday() + 1) % 7)
-        return last_sunday - timedelta(days=7), last_sunday
+        last_monday = boundary - timedelta(days=boundary.weekday())
+        return last_monday - timedelta(days=7), last_monday
     raise ValueError(f"unknown digest kind: {kind}")
 
 
@@ -242,10 +245,11 @@ def build_digest(
             sections.append(_render_section(heading, rest))
 
     label = "Daily" if kind == "daily" else "Weekly"
-    # The window ends at 11pm on `end`, so that's the day the digest is "for".
+    # The window ends at midnight starting `end`, so the digest is "for" the
+    # calendar day (or week) that just ended.
     when = (
-        end.strftime("%B %-d, %Y") if kind == "daily"
-        else f"the week ending {end.strftime('%B %-d, %Y')}"
+        start.strftime("%B %-d, %Y") if kind == "daily"
+        else f"the week ending {(end - timedelta(days=1)).strftime('%B %-d, %Y')}"
     )
     subject = f"{label} filing summary — {when}"
 
@@ -293,8 +297,8 @@ def build_digest(
 def run_digest(kind: str, boundary: date | None = None, dry_run: bool = False) -> int:
     """Build and send digests to every opted-in subscriber. Returns emails sent.
 
-    `boundary` is the 11pm-Central boundary the period ends at (default: the
-    most recent one that has passed)."""
+    `boundary` is the midnight-Central boundary the period ends at (default:
+    the most recent one that has passed)."""
     boundary = boundary or latest_boundary(datetime.now(CENTRAL))
     start, end = period_for(kind, boundary)
     pref = (
@@ -353,7 +357,7 @@ def main() -> None:
     parser.add_argument("--kind", choices=("daily", "weekly"), required=True)
     parser.add_argument(
         "--date", type=date.fromisoformat, default=None,
-        help="11pm-Central boundary the period ends at (default: most recent)",
+        help="midnight-Central boundary the period ends at (default: most recent)",
     )
     parser.add_argument("--dry-run", action="store_true", help="print instead of sending")
     args = parser.parse_args()

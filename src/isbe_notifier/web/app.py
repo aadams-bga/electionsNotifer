@@ -29,7 +29,7 @@ from ..models import (
     utcnow,
 )
 from ..notify import tokens
-from ..notify.emailer import send_email
+from ..notify.emailer import send_admin_email, send_email
 
 CENTRAL = ZoneInfo("America/Chicago")
 TODAY_LIST_CAP = 500
@@ -274,6 +274,7 @@ def subscribe(request: Request, payload: SubscribeRequest):
 
         subscriber = None
         needs_verification = False
+        is_new = False
         if payload.email:
             email = payload.email.lower()
             subscriber = session.scalars(
@@ -283,6 +284,7 @@ def subscribe(request: Request, payload: SubscribeRequest):
                 subscriber = Subscriber(email=email)
                 session.add(subscriber)
                 session.flush()
+                is_new = True
             needs_verification = (
                 payload.wants_email or payload.wants_daily_digest or payload.wants_weekly_digest
             ) and subscriber.email_verified_at is None
@@ -290,6 +292,7 @@ def subscribe(request: Request, payload: SubscribeRequest):
             subscriber = Subscriber(email=None)
             session.add(subscriber)
             session.flush()
+            is_new = True
 
         existing = {
             (s.race_id, s.committee_id): s
@@ -342,6 +345,33 @@ def subscribe(request: Request, payload: SubscribeRequest):
                 subscriber_id,
             )
 
+        follows = [race.label for race in races]
+        if payload.all_cps:
+            follows.append("All CPS Board races")
+        if payload.all_filings:
+            follows.append("The firehose (every statewide filing)")
+        follows.extend(c.name for c in committees)
+        wants = [
+            label
+            for label, on in (
+                ("real-time email", payload.wants_email),
+                ("push notifications", payload.wants_push),
+                ("daily summary", payload.wants_daily_digest),
+                ("weekly summary", payload.wants_weekly_digest),
+            )
+            if on
+        ]
+        who = subscriber.email or f"push-only subscriber #{subscriber_id}"
+        action = "New signup" if is_new else "Signup updated"
+        send_admin_email(
+            f"{action}: {who}",
+            f"{action}: {who}\n\n"
+            f"Follows: {', '.join(follows)}\n"
+            f"Wants: {', '.join(wants)}\n"
+            f"Marketing opt-in: {'yes' if subscriber.marketing_opt_in else 'no'}\n"
+            f"Needs email verification: {'yes' if needs_verification else 'no'}",
+        )
+
     return {
         "ok": True,
         "needs_verification": needs_verification,
@@ -371,7 +401,9 @@ def unsubscribe(request: Request, token: str):
         subscriber = session.get(Subscriber, subscriber_id) if subscriber_id else None
         if subscriber is None:
             return _message(request, "That link is invalid.", error=True)
+        who = subscriber.email or f"push-only subscriber #{subscriber.id}"
         session.delete(subscriber)  # cascades to subscriptions + push subscriptions
+    send_admin_email(f"Unsubscribed: {who}", f"{who} unsubscribed from all alerts.")
     return _message(request, "You've been unsubscribed from all alerts.")
 
 

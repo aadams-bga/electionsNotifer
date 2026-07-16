@@ -113,6 +113,26 @@ def get_email_backend():
     return _backend
 
 
+def send_admin_email(subject: str, body_text: str) -> None:
+    """Plain-text notification to the site operator (ADMIN_EMAIL).
+
+    No-op when ADMIN_EMAIL is unset; failures are logged, never raised —
+    admin mail must not break a signup or unsubscribe.
+    """
+    settings = get_settings()
+    if not settings.admin_email:
+        return
+    msg = EmailMessage()
+    msg["From"] = settings.email_from
+    msg["To"] = settings.admin_email
+    msg["Subject"] = subject
+    msg.set_content(body_text)
+    try:
+        get_email_backend().send(msg)
+    except Exception:
+        logger.exception("admin notification failed: %s", subject)
+
+
 def send_email(
     to_email: str,
     subject: str,

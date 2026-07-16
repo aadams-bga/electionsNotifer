@@ -34,8 +34,14 @@ def client(monkeypatch, tmp_path):
         webapp_module, "send_email",
         lambda to, subject, body, link, sid: sent.append((to, subject, body)),
     )
+    admin_sent = []
+    monkeypatch.setattr(
+        webapp_module, "send_admin_email",
+        lambda subject, body: admin_sent.append((subject, body)),
+    )
     c = TestClient(app)
     c.sent_emails = sent
+    c.admin_emails = admin_sent
     return c
 
 
@@ -299,6 +305,35 @@ def test_signup_idempotent_for_existing_email(client):
     with db.session_scope() as s:
         subs = s.scalars(select(Subscription)).all()
         assert len(subs) == 1  # not duplicated
+
+
+def test_admin_notified_on_signup_update_unsubscribe(client):
+    client.post("/api/subscribe", json={
+        "accepts_terms": True,
+        "email": "watched@example.org", "wants_email": True, "all_cps": True,
+        "race_slugs": ["d1a"], "wants_daily_digest": True, "marketing_opt_in": True,
+    })
+    subject, body = client.admin_emails[-1]
+    assert subject == "New signup: watched@example.org"
+    assert "All CPS Board races" in body
+    assert "real-time email" in body and "daily summary" in body
+    assert "Marketing opt-in: yes" in body
+    assert "Needs email verification: yes" in body
+
+    # Same email again → labeled an update, not a new signup
+    client.post("/api/subscribe", json={
+        "accepts_terms": True,
+        "email": "watched@example.org", "wants_email": True, "race_slugs": ["d2a"],
+    })
+    subject, body = client.admin_emails[-1]
+    assert subject == "Signup updated: watched@example.org"
+
+    with db.session_scope() as s:
+        sid = s.scalars(select(Subscriber)).one().id
+    unsub_token = tokens.make_token(sid, "unsubscribe")
+    client.get(f"/unsubscribe?token={unsub_token}")
+    subject, body = client.admin_emails[-1]
+    assert subject == "Unsubscribed: watched@example.org"
 
 
 def test_manage_and_unsubscribe(client):

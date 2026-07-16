@@ -292,6 +292,24 @@ def test_send_email_without_html_gets_generated_part(monkeypatch):
     assert "View the filing: https://example.test/filing/1" in text
 
 
+def test_send_admin_email(monkeypatch):
+    from isbe_notifier.notify import emailer
+
+    sent = []
+    monkeypatch.setattr(emailer, "get_email_backend",
+                        lambda: type("B", (), {"send": lambda self, m: sent.append(m)})())
+    # No-op when ADMIN_EMAIL is unset.
+    emailer.send_admin_email("Subj", "body")
+    assert sent == []
+
+    monkeypatch.setattr(emailer.get_settings(), "admin_email", "admin@example.org")
+    emailer.send_admin_email("New signup: x@example.org", "the body")
+    (msg,) = sent
+    assert msg["To"] == "admin@example.org"
+    assert msg["List-Unsubscribe"] is None  # not a subscriber email; no footer/headers
+    assert "the body" in msg.get_content()
+
+
 def test_unverified_or_optout_excluded(dbsession, sent_emails):
     race, *_ = _seed_world(dbsession)
     _subscriber(dbsession, "optout@example.org", races=[race], daily=False)

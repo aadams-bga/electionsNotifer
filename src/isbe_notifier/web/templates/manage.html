@@ -58,13 +58,15 @@
     {% endif %}
   </section>
 
-  <details class="advanced" {% if all_filings or followed_committees %}open{% endif %}>
+  <details class="advanced" {% if followed_committees %}open{% endif %}>
     <summary>Advanced options</summary>
-    <h3>Follow everything statewide</h3>
-    <label class="race firehose">
-      <input type="checkbox" id="all-filings" {% if all_filings %}checked{% endif %}>
-      <strong>The firehose</strong> — every report filed statewide (high volume)
-    </label>
+    <div hidden>
+      <h3>Follow everything statewide</h3>
+      <label class="race firehose">
+        <input type="checkbox" id="all-filings" {% if all_filings %}checked{% endif %}>
+        <strong>The firehose</strong> — every report filed statewide (high volume)
+      </label>
+    </div>
 
     <h3>Committees you follow</h3>
     <div class="committee-search">

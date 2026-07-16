@@ -18,7 +18,7 @@
       <tr>
         <td class="nowrap">{{ row.time }}</td>
         <td>{{ row.committee_name }}</td>
-        <td><a href="{{ row.url }}" rel="noopener">{{ row.report_type }}</a></td>
+        <td><a href="{{ row.url }}" target="_blank" rel="noopener">{{ row.report_type }}</a></td>
         {% if scope == "cps" or cps_count %}
         <td>{{ row.race_labels | join(", ") }}</td>
         {% endif %}
@@ -28,7 +28,7 @@
   </table>
   {% if capped %}
   <p class="hint">Showing the {{ rows | length }} most recent — see
-     <a href="https://elections.il.gov">elections.il.gov</a> for the full day.</p>
+     <a href="https://elections.il.gov" target="_blank" rel="noopener">elections.il.gov</a> for the full day.</p>
   {% endif %}
   {% else %}
   <p class="hint">

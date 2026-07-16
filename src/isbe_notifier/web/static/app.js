@@ -49,6 +49,7 @@
   const weeklyChk = document.getElementById("weekly-digest");
   const realtimeNest = document.getElementById("realtime-options");
   const emailSection = document.getElementById("email-section");
+  const marketingChk = document.getElementById("marketing-opt-in");
 
   function updateCadenceUI() {
     const rt = realtimeChk.checked;
@@ -56,10 +57,15 @@
     pushChk.disabled = !rt;
     if (realtimeNest) realtimeNest.classList.toggle("disabled", !rt);
     if (emailSection) {
-      emailSection.hidden = !((rt && emailChk.checked) || dailyChk.checked || weeklyChk.checked);
+      emailSection.hidden = !(
+        (rt && emailChk.checked) ||
+        dailyChk.checked ||
+        weeklyChk.checked ||
+        (marketingChk && marketingChk.checked)
+      );
     }
   }
-  [realtimeChk, emailChk, dailyChk, weeklyChk].forEach((el) => {
+  [realtimeChk, emailChk, dailyChk, weeklyChk, marketingChk].forEach((el) => {
     if (el) el.addEventListener("change", updateCadenceUI);
   });
   updateCadenceUI();

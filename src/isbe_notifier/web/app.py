@@ -395,6 +395,7 @@ def manage(request: Request, token: str):
             {
                 "site_name": get_settings().site_name,
                 "token": token,
+                "unsubscribe_url": tokens.unsubscribe_url(subscriber.id),
                 "email": subscriber.email,
                 "races": races,
                 "selected_race_slugs": {s.race.slug for s in subs if s.race},

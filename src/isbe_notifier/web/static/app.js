@@ -21,6 +21,18 @@
     });
   }
 
+  // --- Unsubscribe link (manage page): confirm, since it deletes everything ---
+  const unsubLink = document.getElementById("unsubscribe-link");
+  if (unsubLink) {
+    unsubLink.addEventListener("click", (e) => {
+      if (!confirm("Unsubscribe from all alerts? This removes your subscription entirely.")) {
+        e.preventDefault();
+      } else {
+        localStorage.removeItem("manage_token");
+      }
+    });
+  }
+
   // --- iOS hint: web push requires the PWA to be installed to the home screen ---
   const iosHint = document.getElementById("ios-hint");
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);

@@ -110,12 +110,20 @@ section {
   margin-top: 0;
 }
 
-/* Signup/manage forms: no boxes — headings carry the hierarchy */
+/* Signup/manage forms: one bordered box wraps everything up to the consent
+   checkboxes; the inner sections stay borderless. */
 form#signup-form section, form#manage-form section {
   border: 0;
   padding: 0;
   margin-bottom: 1.75rem;
 }
+.form-box {
+  background: #fff;
+  border: 1px solid var(--border);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.form-box > :last-child { margin-bottom: 0; }
 
 /* Delivery methods nested under the real-time checkbox */
 .nested { margin-left: 1.75rem; transition: opacity 150ms ease-in-out; }
@@ -182,7 +190,7 @@ button:disabled { opacity: 0.55; cursor: wait; }
   gap: 0.25rem 0.75rem;
 }
 .race, .channel { display: block; padding: 0.25rem 0; }
-.all-cps { border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 0.5rem; }
+.all-cps { margin-bottom: 0.5rem; }
 
 /* ── Committee search ────────────────────────────────── */
 .committee-search { position: relative; }

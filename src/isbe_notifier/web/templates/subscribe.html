@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <form id="signup-form" data-vapid-key="{{ vapid_public_key }}">
+  <div class="form-box">
   <section>
     <h2>1. Which races do you want to follow?</h2>
     <label class="race all-cps">
@@ -69,6 +70,7 @@
       <ul id="committee-chosen"></ul>
     </div>
   </details>
+  </div>
 
   <section class="consent">
     <label class="channel">
@@ -90,4 +92,4 @@
   <p id="form-status" role="status"></p>
 </form>
 {% endblock %}
-{% block scripts %}<script src="/static/app.js?v=2"></script>{% endblock %}
+{% block scripts %}<script src="/static/app.js?v=3"></script>{% endblock %}

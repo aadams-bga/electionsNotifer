@@ -6,6 +6,7 @@
     <button type="button" id="switch-account" class="linklike">Switch account on this
     device</button></p>
 
+  <div class="form-box">
   <section>
     <h3>Which races do you want to follow?</h3>
     <label class="race all-cps">
@@ -77,9 +78,13 @@
       </ul>
     </div>
   </details>
+  </div>
 
   <button type="submit">Save changes</button>
   <p id="form-status" role="status"></p>
+
+  <p class="hint">Done with alerts?
+    <a href="{{ unsubscribe_url }}" id="unsubscribe-link">Unsubscribe from all alerts</a></p>
 </form>
 {% endblock %}
-{% block scripts %}<script src="/static/app.js?v=2"></script>{% endblock %}
+{% block scripts %}<script src="/static/app.js?v=3"></script>{% endblock %}

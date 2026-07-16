@@ -1,16 +1,37 @@
 """Email backends: "console" (dev — logs instead of sending) and "ses" (Amazon SES).
 
-Every email carries List-Unsubscribe headers and a footer unsubscribe link.
+Every email is multipart (text + HTML) and carries List-Unsubscribe headers plus
+a footer with manage/unsubscribe links and a contact address.
 """
 
 import html as html_mod
 import logging
+import re
 from email.message import EmailMessage
 
 from ..config import get_settings
 from .tokens import manage_url, unsubscribe_url
 
 logger = logging.getLogger(__name__)
+
+CONTACT_EMAIL = "aadams@bettergov.org"
+
+_URL_RE = re.compile(r"https?://[^\s<>\"']+")
+
+
+def _text_to_html(text: str) -> str:
+    """Plain text → simple HTML: escaped, paragraphs on blank lines, bare URLs
+    linked. Used for emails composed as text (real-time alerts, sign-in,
+    verification) so their HTML part isn't a wall of raw URLs."""
+    paragraphs = []
+    for block in text.split("\n\n"):
+        escaped = html_mod.escape(block)
+        linked = _URL_RE.sub(lambda m: f'<a href="{m.group(0)}">{m.group(0)}</a>', escaped)
+        paragraphs.append(f'<p style="margin:0 0 1em">{linked.replace(chr(10), "<br>")}</p>')
+    return (
+        '<div style="font-family:Arial,Helvetica,sans-serif;color:#111111;'
+        'line-height:1.5;max-width:640px">' + "\n".join(paragraphs) + "</div>"
+    )
 
 
 def _build_message(
@@ -34,19 +55,25 @@ def _build_message(
     footer += (
         f"Manage your alerts: {manage}\n"
         f"Unsubscribe from all alerts: {unsub}\n"
+        f"Questions? Email {CONTACT_EMAIL}\n"
         f"{settings.site_name}"
     )
     msg.set_content(body_text + footer)
 
-    if body_html is not None:
-        html_footer = (
-            '<hr style="border:none;border-top:1px solid #dce1e9;margin:1.5em 0">'
-            f'<p style="color:#4f5566;font-size:0.85em">'
-            f'<a href="{html_mod.escape(manage, quote=True)}">Manage your alerts</a> · '
-            f'<a href="{html_mod.escape(unsub, quote=True)}">Unsubscribe from all alerts</a><br>'
-            f"{html_mod.escape(settings.site_name)}</p>"
+    html_footer = '<hr style="border:none;border-top:1px solid #dce1e9;margin:1.5em 0">'
+    html_footer += '<p style="color:#4f5566;font-size:0.85em">'
+    if link_url:
+        html_footer += (
+            f'<a href="{html_mod.escape(link_url, quote=True)}">View the filing</a><br>'
         )
-        msg.add_alternative(body_html + html_footer, subtype="html")
+    html_footer += (
+        f'<a href="{html_mod.escape(manage, quote=True)}">Manage your alerts</a> · '
+        f'<a href="{html_mod.escape(unsub, quote=True)}">Unsubscribe from all alerts</a><br>'
+        f'Questions? Email <a href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a><br>'
+        f"{html_mod.escape(settings.site_name)}</p>"
+    )
+    html_body = body_html if body_html is not None else _text_to_html(body_text)
+    msg.add_alternative(html_body + html_footer, subtype="html")
     return msg
 
 

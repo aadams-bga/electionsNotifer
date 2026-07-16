@@ -1,6 +1,6 @@
 {
-  "name": "Campaign Disclosure Alerts",
-  "short_name": "Disclosures",
+  "name": "Illinois Answers Campaign Alerts",
+  "short_name": "Campaign Alerts",
   "description": "Real-time alerts when Illinois campaign finance reports are filed",
   "start_url": "/",
   "display": "standalone",

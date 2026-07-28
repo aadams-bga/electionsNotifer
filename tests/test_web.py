@@ -143,7 +143,7 @@ def test_embed_subscribe_page_renders(client):
     assert box_start < resp.text.index("accept-terms") < resp.text.index("submit-btn") \
         < resp.text.index("push notifications on your device") < box_end
     # email address field is always visible, not conditionally hidden
-    assert '<section>\n    <h2>3. Your email address</h2>' in resp.text
+    assert '<section>\n    <h2>What is your email address?</h2>' in resp.text
 
 
 def test_frame_headers_scoped_to_embed_routes(client):

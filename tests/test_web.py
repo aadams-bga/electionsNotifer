@@ -131,14 +131,17 @@ def test_embed_subscribe_page_renders(client):
     assert "Today's filings" not in resp.text
     # push requires a top-level browsing context (browsers block permission
     # prompts from cross-origin iframes) — not offered in the embed; the note
-    # about it lives after the form-box, separated by a divider
+    # about it lives inside the box, below the submit button
     assert 'id="wants-push"' not in resp.text
     assert 'id="wants-email"' not in resp.text  # email is real-time's only channel here
     assert "filings.illinoisanswers.org" in resp.text  # points push seekers to the real site
-    # box (races..submit) comes first, then the divider, then the push note
+    assert "embed-divider" not in resp.text
+    assert "always arrive by email" not in resp.text
+    # box (races..submit..push note) all inside one form-box div
     box_start = resp.text.index('<div class="form-box">')
+    box_end = resp.text.index("</div>", resp.text.index("push notifications on your device"))
     assert box_start < resp.text.index("accept-terms") < resp.text.index("submit-btn") \
-        < resp.text.index("embed-divider") < resp.text.index("push notifications on your device")
+        < resp.text.index("push notifications on your device") < box_end
     # email address field is always visible, not conditionally hidden
     assert '<section>\n    <h2>3. Your email address</h2>' in resp.text
 

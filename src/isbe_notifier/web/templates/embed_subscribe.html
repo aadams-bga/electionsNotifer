@@ -30,7 +30,6 @@
     <label class="channel">
       <input type="checkbox" id="weekly-digest"> Weekly summary: everything you follow, every Sunday night at midnight
     </label>
-    <p class="hint">Daily and weekly summaries always arrive by email.</p>
   </section>
 
   <section>
@@ -59,7 +58,7 @@
     </div>
   </details>
 
-  <section class="consent">
+  <section class="consent embed-consent">
     <label class="channel">
       <input type="checkbox" id="accept-terms"> I agree to the
       <a href="https://www.bettergov.org/terms-of-service/" target="_blank"
@@ -77,12 +76,10 @@
 
   <button type="submit" id="submit-btn">Sign up for alerts</button>
   <p id="form-status" role="status"></p>
-  </div>
-
-  <hr class="embed-divider">
   <p class="hint">Want push notifications on your device too? Sign up at
     <a href="https://filings.illinoisanswers.org/subscribe" target="_blank" rel="noopener">filings.illinoisanswers.org</a>
     — push can't be set up from within this embedded form.</p>
+  </div>
 </form>
 {% endblock %}
 {% block scripts %}<script src="/static/app.js?v=3"></script>{% endblock %}

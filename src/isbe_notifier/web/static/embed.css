@@ -6,8 +6,11 @@ body.embed main {
   padding: 1rem;
 }
 
-.embed-divider {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 1.25rem 0;
+.embed-consent {
+  font-size: 0.85em;
+}
+
+.embed-consent input[type="checkbox"] {
+  transform: scale(0.85);
+  vertical-align: middle;
 }

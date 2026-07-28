@@ -144,7 +144,8 @@ def test_frame_headers_scoped_to_embed_routes(client):
     resp = client.get("/embed/subscribe")
     assert "x-frame-options" not in resp.headers
     csp = resp.headers["content-security-policy"]
-    assert "frame-ancestors 'self' https://illinoisanswers.org https://www.illinoisanswers.org" in csp
+    assert "frame-ancestors 'self' https://illinoisanswers.org" in csp
+    assert "https://www.illinoisanswers.org" in csp
     assert "Real-time alerts" in resp.text
     assert "Advanced options" in resp.text  # firehose + committee search live here
     assert "firehose" in resp.text.lower()

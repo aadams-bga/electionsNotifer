@@ -129,6 +129,10 @@ def test_embed_subscribe_page_renders(client):
     assert "signup-form" in resp.text
     # no site header/nav in the embed — it's meant to sit inside another page
     assert "Today's filings" not in resp.text
+    # push requires a top-level browsing context (browsers block permission
+    # prompts from cross-origin iframes) — not offered in the embed
+    assert 'id="wants-push"' not in resp.text
+    assert "filings.illinoisanswers.org" in resp.text  # points push seekers to the real site
 
 
 def test_frame_headers_scoped_to_embed_routes(client):

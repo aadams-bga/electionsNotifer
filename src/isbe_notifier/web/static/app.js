@@ -54,7 +54,7 @@
   function updateCadenceUI() {
     const rt = realtimeChk.checked;
     emailChk.disabled = !rt || emailChk.dataset.locked === "1";
-    pushChk.disabled = !rt;
+    if (pushChk) pushChk.disabled = !rt;
     if (realtimeNest) realtimeNest.classList.toggle("disabled", !rt);
     if (emailSection) {
       emailSection.hidden = !(
@@ -168,7 +168,7 @@
     // real-time off, digests are the only sends and they're always email.
     const realtimeOn = realtimeChk.checked;
     const emailChannel = emailChk.checked;
-    const pushChannel = pushChk.checked;
+    const pushChannel = !!(pushChk && pushChk.checked);
     const digestOn = dailyChk.checked || weeklyChk.checked;
     if (!realtimeOn && !digestOn) {
       statusEl.textContent =
@@ -177,8 +177,9 @@
       return;
     }
     if (realtimeOn && !emailChannel && !pushChannel) {
-      statusEl.textContent =
-        "Real-time alerts need a delivery method — check email or push notifications.";
+      statusEl.textContent = pushChk
+        ? "Real-time alerts need a delivery method — check email or push notifications."
+        : "Real-time alerts need a delivery method — check email.";
       submitBtn.disabled = false;
       return;
     }

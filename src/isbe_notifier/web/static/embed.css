@@ -5,3 +5,9 @@ body.embed main {
   margin: 0;
   padding: 1rem;
 }
+
+.embed-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.25rem 0;
+}

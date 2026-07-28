@@ -53,7 +53,7 @@
 
   function updateCadenceUI() {
     const rt = realtimeChk.checked;
-    emailChk.disabled = !rt || emailChk.dataset.locked === "1";
+    if (emailChk) emailChk.disabled = !rt || emailChk.dataset.locked === "1";
     if (pushChk) pushChk.disabled = !rt;
     if (realtimeNest) realtimeNest.classList.toggle("disabled", !rt);
     if (emailSection) {
@@ -167,7 +167,9 @@
     // Email/push checkboxes are delivery methods for real-time alerts; with
     // real-time off, digests are the only sends and they're always email.
     const realtimeOn = realtimeChk.checked;
-    const emailChannel = emailChk.checked;
+    // No "By email" checkbox means email is the only delivery channel offered
+    // (the embed form) — real-time implies email rather than asking to pick.
+    const emailChannel = emailChk ? emailChk.checked : true;
     const pushChannel = !!(pushChk && pushChk.checked);
     const digestOn = dailyChk.checked || weeklyChk.checked;
     if (!realtimeOn && !digestOn) {

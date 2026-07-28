@@ -23,14 +23,6 @@
       <input type="checkbox" id="realtime"> Real-time alerts: sent minutes
       after a report is filed
     </label>
-    <div class="nested disabled" id="realtime-options">
-      <label class="channel">
-        <input type="checkbox" id="wants-email" disabled> By email
-      </label>
-      <p class="hint">Want push notifications on your device too? Sign up at
-        <a href="https://filings.illinoisanswers.org/subscribe" target="_blank" rel="noopener">filings.illinoisanswers.org</a>
-        — push can't be set up from within this embedded form.</p>
-    </div>
     <label class="channel">
       <input type="checkbox" id="daily-digest"> Daily summary: everything you follow,
       one email each night at midnight
@@ -41,7 +33,7 @@
     <p class="hint">Daily and weekly summaries always arrive by email.</p>
   </section>
 
-  <section id="email-section" hidden>
+  <section>
     <h2>3. Your email address</h2>
     <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
   </section>
@@ -66,7 +58,6 @@
       <ul id="committee-chosen"></ul>
     </div>
   </details>
-  </div>
 
   <section class="consent">
     <label class="channel">
@@ -86,6 +77,12 @@
 
   <button type="submit" id="submit-btn">Sign up for alerts</button>
   <p id="form-status" role="status"></p>
+  </div>
+
+  <hr class="embed-divider">
+  <p class="hint">Want push notifications on your device too? Sign up at
+    <a href="https://filings.illinoisanswers.org/subscribe" target="_blank" rel="noopener">filings.illinoisanswers.org</a>
+    — push can't be set up from within this embedded form.</p>
 </form>
 {% endblock %}
 {% block scripts %}<script src="/static/app.js?v=3"></script>{% endblock %}

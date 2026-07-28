@@ -1,0 +1,7 @@
+/* Embed-only overrides: no header/nav/footer, so drop the page max-width and
+   margin that assume they're there, and trim edge padding for a snug iframe. */
+body.embed main {
+  max-width: none;
+  margin: 0;
+  padding: 1rem;
+}

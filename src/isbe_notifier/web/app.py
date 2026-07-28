@@ -51,17 +51,28 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(status_code=429, content={"detail": "Too many requests; try later."})
 
 
+# Origins allowed to frame /embed/* pages (WordPress signup embed). Everything
+# else keeps X-Frame-Options: DENY — embeddable pages are opt-in, not default.
+EMBEDDABLE_ANCESTORS = "https://illinoisanswers.org https://www.illinoisanswers.org"
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
+    embeddable = request.url.path.startswith("/embed/")
     response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "same-origin"
-    response.headers["Content-Security-Policy"] = (
+    csp = (
         "default-src 'self'; img-src 'self' data:; "
         "style-src 'self' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; script-src 'self'"
     )
+    if embeddable:
+        csp += f"; frame-ancestors 'self' {EMBEDDABLE_ANCESTORS}"
+    else:
+        response.headers["X-Frame-Options"] = "DENY"
+        csp += "; frame-ancestors 'self'"
+    response.headers["Content-Security-Policy"] = csp
     if get_settings().base_url.startswith("https://"):
         response.headers["Strict-Transport-Security"] = "max-age=31536000"
     return response
@@ -154,6 +165,22 @@ def subscribe_page(request: Request):
         return templates.TemplateResponse(
             request,
             "subscribe.html",
+            {
+                "races": races,
+                "site_name": settings.site_name,
+                "vapid_public_key": settings.vapid_public_key,
+            },
+        )
+
+
+@app.get("/embed/subscribe", response_class=HTMLResponse)
+def embed_subscribe_page(request: Request):
+    settings = get_settings()
+    with session_scope() as session:
+        races = _races(session)
+        return templates.TemplateResponse(
+            request,
+            "embed_subscribe.html",
             {
                 "races": races,
                 "site_name": settings.site_name,

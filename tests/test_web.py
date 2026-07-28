@@ -120,6 +120,27 @@ def test_subscribe_page_renders(client):
     assert "CPS Board President" in resp.text
     assert "All CPS Board races" in resp.text
     assert "Daily summary" in resp.text
+
+
+def test_embed_subscribe_page_renders(client):
+    resp = client.get("/embed/subscribe")
+    assert resp.status_code == 200
+    assert "District 10b" in resp.text
+    assert "signup-form" in resp.text
+    # no site header/nav in the embed — it's meant to sit inside another page
+    assert "Today's filings" not in resp.text
+
+
+def test_frame_headers_scoped_to_embed_routes(client):
+    resp = client.get("/subscribe")
+    assert resp.headers["x-frame-options"] == "DENY"
+    assert "frame-ancestors 'self'" in resp.headers["content-security-policy"]
+    assert "illinoisanswers.org" not in resp.headers["content-security-policy"]
+
+    resp = client.get("/embed/subscribe")
+    assert "x-frame-options" not in resp.headers
+    csp = resp.headers["content-security-policy"]
+    assert "frame-ancestors 'self' https://illinoisanswers.org https://www.illinoisanswers.org" in csp
     assert "Real-time alerts" in resp.text
     assert "Advanced options" in resp.text  # firehose + committee search live here
     assert "firehose" in resp.text.lower()

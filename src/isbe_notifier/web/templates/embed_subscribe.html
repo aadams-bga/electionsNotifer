@@ -1,0 +1,97 @@
+{% extends "embed_base.html" %}
+{% block content %}
+<form id="signup-form" data-vapid-key="{{ vapid_public_key }}">
+  <div class="form-box">
+  <section>
+    <h2>1. Which races do you want to follow?</h2>
+    <label class="race all-cps">
+      <input type="checkbox" id="all-cps"> <strong>All CPS Board races</strong> —
+      the president's race and every district
+    </label>
+    <div class="race-grid">
+      {% for race in races %}
+      <label class="race">
+        <input type="checkbox" name="race" value="{{ race.slug }}"> {{ race.label }}
+      </label>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section>
+    <h2>2. What updates do you want?</h2>
+    <label class="channel">
+      <input type="checkbox" id="realtime"> Real-time alerts: sent minutes
+      after a report is filed
+    </label>
+    <div class="nested disabled" id="realtime-options">
+      <label class="channel">
+        <input type="checkbox" id="wants-email" disabled> By email
+      </label>
+      <label class="channel">
+        <input type="checkbox" id="wants-push" disabled> By push notification
+        on this device
+      </label>
+      <p class="hint">On iPhone/iPad, push only works after you
+        <a href="https://filings.illinoisanswers.org/install" target="_blank" rel="noopener">install the app</a> to your home screen. On Android and
+        desktop it works in the browser or as an installed app.</p>
+      <p class="hint" id="ios-hint" hidden>You're on an iPhone/iPad browser tab —
+        <a href="https://filings.illinoisanswers.org/install" target="_blank" rel="noopener">install the app first</a> or push won't be delivered.</p>
+    </div>
+    <label class="channel">
+      <input type="checkbox" id="daily-digest"> Daily summary: everything you follow,
+      one email each night at midnight
+    </label>
+    <label class="channel">
+      <input type="checkbox" id="weekly-digest"> Weekly summary: everything you follow, every Sunday night at midnight
+    </label>
+    <p class="hint">Daily and weekly summaries always arrive by email.</p>
+  </section>
+
+  <section id="email-section" hidden>
+    <h2>3. Your email address</h2>
+    <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+  </section>
+
+  <details class="advanced">
+    <summary>Advanced options</summary>
+    <div hidden>
+      <h3>Follow everything statewide</h3>
+      <label class="race firehose">
+        <input type="checkbox" id="all-filings"> <strong>The firehose</strong>: every report
+        filed with the State Board of Elections, statewide
+      </label>
+      <p class="hint">Warning: this can be hundreds of filings per day near quarterly
+        deadlines. Best with push notifications or a filtered inbox.</p>
+    </div>
+
+    <h3>Follow any Illinois committee</h3>
+    <div class="committee-search">
+      <input type="search" id="committee-q" placeholder="Search by committee name or ID…"
+             autocomplete="off">
+      <ul id="committee-results" hidden></ul>
+      <ul id="committee-chosen"></ul>
+    </div>
+  </details>
+  </div>
+
+  <section class="consent">
+    <label class="channel">
+      <input type="checkbox" id="accept-terms"> I agree to the
+      <a href="https://www.bettergov.org/terms-of-service/" target="_blank"
+         rel="noopener">Terms of Service</a> and the
+      <a href="https://www.bettergov.org/better-government-association-privacy-policy/"
+         target="_blank" rel="noopener">Privacy Policy</a>.
+    </label>
+    <label class="channel">
+      <input type="checkbox" id="marketing-opt-in" checked> I'd like to receive additional
+      emails from Illinois Answers Project, such as newsletters, event invitations and
+      occasional opportunities to support our work. I understand I can unsubscribe at
+      any time.
+    </label>
+  </section>
+
+  <button type="submit" id="submit-btn">Sign up for alerts</button>
+  <p id="form-status" role="status"></p>
+</form>
+{% endblock %}
+{% block scripts %}<script src="/static/app.js?v=3"></script>{% endblock %}

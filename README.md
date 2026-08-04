@@ -4,8 +4,6 @@ Watches the Illinois State Board of Elections ["Latest Reports Filed"](https://e
 feed and notifies subscribers by email and web push when committees they follow — or the
 2026 CPS Board races they care about — file campaign-finance reports.
 
-See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the full design.
-
 ## Local development
 
 ```bash

@@ -8,6 +8,7 @@ Two ways a filing matches:
    case-insensitively, regardless of which committee filed the report.
 """
 
+import re
 from dataclasses import dataclass
 
 from sqlalchemy import or_, select
@@ -15,12 +16,30 @@ from sqlalchemy.orm import Session, joinedload
 
 from .models import Filing, Race, RaceCommittee, Subscription
 
+_NON_ALNUM = re.compile(r"[^a-z0-9]+")
+
+
+def _normalize(value: str) -> str:
+    """Casefold and reduce every run of punctuation/whitespace to one space.
+
+    "Office - District" is hand-typed by filers and wildly inconsistent — real
+    values include "Chicago Board of Education, 1B", "CHICAGO SCHOOL BOARD" and
+    "Chicago Board of Education 5A" — so patterns are compared against this
+    normalized form instead of the raw string.
+    """
+    return _NON_ALNUM.sub(" ", value.casefold()).strip()
+
 
 def _line_matches_race(office_district: str | None, race: Race) -> bool:
     if not office_district:
         return False
-    hay = office_district.casefold()
-    return any(p.casefold() in hay for p in race.office_district_patterns or [])
+    hay = _normalize(office_district)
+    # Patterns are DB-editable; an empty one would otherwise match everything.
+    return any(
+        norm in hay
+        for norm in (_normalize(p) for p in race.office_district_patterns or [])
+        if norm
+    )
 
 
 def matched_race_ids(session: Session, filing: Filing) -> set[int]:

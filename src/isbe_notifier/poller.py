@@ -359,6 +359,7 @@ def main() -> None:
     logger.info("poller starting; interval %ss", settings.poll_interval_seconds)
 
     from .committee_sync import sync_committees
+    from .race_mapping import sync_race_committees
 
     last_committee_sync = 0.0
     last_digest_run: dict = {}
@@ -368,6 +369,10 @@ def main() -> None:
         ):
             try:
                 sync_committees(client)
+                # Must follow the committee sync: it skips committees that
+                # aren't in the committees table yet. Honours the editorial
+                # overrides in raceCommitteeOverrides.csv.
+                sync_race_committees(client)
                 last_committee_sync = time.monotonic()
             except Exception:  # noqa: BLE001 — sync failure must not stop polling
                 logger.exception("committee sync failed; will retry next cycle")

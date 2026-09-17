@@ -1,0 +1,60 @@
+{# Race picker sections, shared by subscribe / embed / manage.
+
+   Each group is a collapsible <details> so five groups don't make one very tall
+   form. CPS opens by default and so does any group the subscriber already
+   follows — a collapsed section must never hide an existing selection.
+
+   Groups with few races render a checkbox grid. The legislative groups (118
+   House + 59 Senate districts) render a search box instead, and the client
+   fetches from /api/races.
+
+   selected_race_slugs / selected_groups are only set on the manage page; on the
+   signup forms they're undefined, which Jinja treats as falsy. #}
+{% for section in race_sections %}
+<details class="race-group" data-group="{{ section.slug }}"{% if section.start_open %} open{% endif %}>
+  <summary><span class="group-name">{{ section.heading }}</span></summary>
+
+  <div class="race-group-body">
+    {% if section.select_all %}
+    {# Same markup and same one-line label for every group; only the control
+       differs, because CPS keeps the original #all-cps id that app.js and the
+       all_cps payload field predate. #}
+    <label class="race select-all">
+      {% if section.slug == 'cps' %}
+      <input type="checkbox" id="all-cps" {% if all_cps %}checked{% endif %}>
+      {% else %}
+      <input type="checkbox" class="group-all" data-group="{{ section.slug }}"
+             {% if section.slug in (selected_groups or []) %}checked{% endif %}>
+      {% endif %}
+      <strong>{{ section.select_all_label }}</strong>
+    </label>
+    {% endif %}
+
+    {% if section.picker %}
+    <div class="race-search" data-group="{{ section.slug }}">
+      <input type="search" class="race-q" data-group="{{ section.slug }}"
+             placeholder="Search {{ section.count }} districts by number or name…"
+             autocomplete="off">
+      <ul class="race-results" hidden></ul>
+      <ul class="race-chosen">
+        {% for race in section.chosen %}
+        <li data-slug="{{ race.slug }}">{{ race.label }}
+          <button type="button" class="remove" aria-label="Remove {{ race.label }}">×</button>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% else %}
+    <div class="race-grid">
+      {% for race in section.races %}
+      <label class="race">
+        <input type="checkbox" name="race" value="{{ race.slug }}"
+               {% if race.slug in (selected_race_slugs or []) %}checked{% endif %}>
+        {{ race.label }}
+      </label>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</details>
+{% endfor %}

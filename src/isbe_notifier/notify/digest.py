@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session, selectinload
 from ..config import get_settings
 from ..db import session_scope
 from ..models import DigestSend, Filing, FilingRace, Race, Subscriber, Subscription, utcnow
+from ..seeds import RACE_GROUPS
 from .content import _date, _money, filing_total
 from .emailer import send_email
 
@@ -200,6 +201,10 @@ def build_digest(
         "all_filings": any(s.all_filings for s in subscriber.subscriptions),
         "all_cps": any(s.all_cps for s in subscriber.subscriptions),
     }
+    # Groups followed wholesale. all_cps is the CPS group's older equivalent.
+    followed_groups = {s.all_group for s in subscriber.subscriptions if s.all_group}
+    if flags["all_cps"]:
+        followed_groups.add("cps")
     followed_race_ids = {s.race_id for s in subscriber.subscriptions if s.race_id}
     followed_committee_ids = {s.committee_id for s in subscriber.subscriptions if s.committee_id}
 
@@ -214,10 +219,11 @@ def build_digest(
     races = {
         r.id: r for r in session.scalars(select(Race).order_by(Race.sort_order))
     }
-    digest_race_ids = (
-        list(races) if flags["all_cps"]
-        else [rid for rid in races if rid in followed_race_ids]
-    )
+    # A followed group pulls in every race in it; otherwise only explicit follows.
+    digest_race_ids = [
+        rid for rid, race in races.items()
+        if race.race_group in followed_groups or rid in followed_race_ids
+    ]
 
     by_id = {f.id: f for f in filings}
     sections: list[tuple[str, str]] = []  # (text, html)
@@ -258,10 +264,15 @@ def build_digest(
         recap = "every campaign finance filing statewide — all races and committees"
     else:
         followed = []
-        if flags["all_cps"]:
-            followed.append("every CPS Board race")
-        else:
-            followed.extend(races[rid].label for rid in digest_race_ids)
+        for group in sorted(
+            followed_groups, key=lambda g: RACE_GROUPS.get(g, {}).get("sort_base", 9999)
+        ):
+            followed.append(RACE_GROUPS.get(group, {}).get("recap", f"every {group} race"))
+        # Individually-picked races, minus any already covered by a group follow.
+        followed.extend(
+            races[rid].label for rid in digest_race_ids
+            if races[rid].race_group not in followed_groups
+        )
         followed.extend(sorted(
             (s.committee.name for s in subscriber.subscriptions
              if s.committee_id and s.committee),

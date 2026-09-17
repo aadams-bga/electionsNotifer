@@ -9,18 +9,7 @@
   <div class="form-box">
   <section>
     <h3>Which races do you want to follow?</h3>
-    <label class="race all-cps">
-      <input type="checkbox" id="all-cps" {% if all_cps %}checked{% endif %}>
-      <strong>All CPS Board races</strong>: the president's race and every district
-    </label>
-    <div class="race-grid">
-      {% for race in races %}
-      <label class="race">
-        <input type="checkbox" name="race" value="{{ race.slug }}"
-               {% if race.slug in selected_race_slugs %}checked{% endif %}> {{ race.label }}
-      </label>
-      {% endfor %}
-    </div>
+    {% include "_race_sections.html" %}
   </section>
 
   <section>
@@ -89,4 +78,4 @@
     <a href="{{ unsubscribe_url }}" id="unsubscribe-link">Unsubscribe from all alerts</a></p>
 </form>
 {% endblock %}
-{% block scripts %}<script src="/static/app.js?v=4"></script>{% endblock %}
+{% block scripts %}<script src="/static/app.js?v=5"></script>{% endblock %}

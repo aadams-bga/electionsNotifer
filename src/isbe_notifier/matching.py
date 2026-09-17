@@ -33,10 +33,12 @@ def _normalize(value: str) -> str:
 def _line_matches_race(office_district: str | None, race: Race) -> bool:
     if not office_district:
         return False
-    hay = _normalize(office_district)
+    # Both sides are padded with spaces so patterns match whole tokens: without
+    # it "state representative 1" would match "State Representative 11".
+    hay = f" {_normalize(office_district)} "
     # Patterns are DB-editable; an empty one would otherwise match everything.
     return any(
-        norm in hay
+        f" {norm} " in hay
         for norm in (_normalize(p) for p in race.office_district_patterns or [])
         if norm
     )
@@ -65,6 +67,15 @@ def matched_race_ids(session: Session, filing: Filing) -> set[int]:
     return race_ids
 
 
+def race_groups(session: Session, race_ids: set[int] | list[int]) -> set[str]:
+    """The distinct race_group values for the given races."""
+    if not race_ids:
+        return set()
+    return set(
+        session.scalars(select(Race.race_group).where(Race.id.in_(race_ids)))
+    )
+
+
 @dataclass
 class MatchedRecipient:
     subscriber_id: int
@@ -88,9 +99,13 @@ def recipients_for(session: Session, filing: Filing) -> list[MatchedRecipient]:
         clauses.append(Subscription.committee_id == filing.committee_id)
     if race_ids:
         clauses.append(Subscription.race_id.in_(race_ids))
-        # Every race in the races table is a CPS race, so any race match
-        # also satisfies "all CPS races" subscriptions.
-        clauses.append(Subscription.all_cps.is_(True))
+        # "Follow every race in a group" subscriptions match only when the filing
+        # hit a race in THAT group. The races table is no longer CPS-only, so a
+        # governor filing must never reach an all_cps subscriber.
+        groups = race_groups(session, race_ids)
+        if "cps" in groups:
+            clauses.append(Subscription.all_cps.is_(True))
+        clauses.append(Subscription.all_group.in_(groups))
 
     query = (
         select(Subscription)

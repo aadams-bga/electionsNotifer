@@ -8,9 +8,9 @@ from sqlalchemy.orm import sessionmaker
 import isbe_notifier.db as db
 from isbe_notifier.models import Base, Committee, PushSubscription, Subscriber, Subscription
 from isbe_notifier.notify import tokens
-from isbe_notifier.seeds import cps_races
+from isbe_notifier.seeds import all_races
 from isbe_notifier.web import app as webapp_module
-from isbe_notifier.web.app import app
+from isbe_notifier.web.app import LANDING_SCOPES, app
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ def client(monkeypatch, tmp_path):
     from isbe_notifier.models import Race
 
     with db.session_scope() as s:
-        for data in cps_races():
+        for data in all_races():
             s.add(Race(**data))
         s.add(Committee(id=12345, name="Friends for a Better Chicago"))
 
@@ -56,11 +56,20 @@ def test_landing_renders(client):
     assert resp.status_code == 200
     assert "Today's reports" in resp.text
     assert "Sign up" in resp.text  # nav CTA; the full ad lives on /about now
-    # empty state links to the statewide view
-    assert "No reports tied to a CPS Board race yet today" in resp.text
-    # statewide view is demoted to an Advanced link below the CPS table
+    assert "No reports tied to CPS Board yet today" in resp.text
+
+    # One tab per scope, each reachable, CPS the default.
+    for slug, label in [
+        ("cps", "CPS Board"), ("governor", "Governor"), ("mayor", "Chicago Mayor"),
+        ("ga", "General Assembly"), ("statewide", "Statewide"), ("all", "All filings"),
+    ]:
+        assert label in resp.text, label
+        assert client.get(f"/?scope={slug}").status_code == 200
     assert "/?scope=all" in resp.text
-    assert client.get("/?scope=all").status_code == 200
+
+    # An unknown scope falls back to the default rather than erroring.
+    assert client.get("/?scope=nonsense").status_code == 200
+    assert "Today's reports in CPS Board" in client.get("/?scope=nonsense").text
 
 
 def test_landing_shows_todays_filings(client):
@@ -463,6 +472,32 @@ def test_admin_requires_token(client):
     assert client.get("/admin").status_code == 404
 
 
+def test_admin_export_marketing_csv(client, monkeypatch):
+    from isbe_notifier.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "admin_token", "secret")
+
+    assert client.get("/admin/export/marketing.csv").status_code == 404
+    assert client.get("/admin/export/marketing.csv?token=wrong").status_code == 404
+
+    client.post("/api/subscribe", json={
+        "accepts_terms": True, "marketing_opt_in": True, "all_cps": True,
+        "email": "yes@example.org", "wants_email": True, "wants_daily_digest": True,
+    })
+    client.post("/api/subscribe", json={
+        "accepts_terms": True, "marketing_opt_in": False, "all_cps": True,
+        "email": "no@example.org", "wants_email": True, "wants_daily_digest": True,
+    })
+
+    resp = client.get("/admin/export/marketing.csv?token=secret")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    lines = resp.text.strip().splitlines()
+    assert lines[0] == "email,created_at"
+    assert len(lines) == 2
+    assert "yes@example.org" in lines[1]
+
+
 def test_firehose_signup(client):
     resp = client.post("/api/subscribe", json={
         "accepts_terms": True,
@@ -473,3 +508,265 @@ def test_firehose_signup(client):
         sub = s.scalars(select(Subscription)).one()
         assert sub.all_filings is True
         assert sub.race_id is None and sub.committee_id is None
+
+
+def test_signup_with_group_follow(client):
+    resp = client.post("/api/subscribe", json={
+        "accepts_terms": True, "email": "g@example.org", "wants_email": True,
+        "all_groups": ["statewide", "chicago"],
+    })
+    assert resp.status_code == 200
+    with db.session_scope() as s:
+        groups = {sub.all_group for sub in s.scalars(select(Subscription))}
+        assert groups == {"statewide", "chicago"}
+
+
+def test_group_follow_is_enough_on_its_own(client):
+    """A group follow counts as following something — no race/committee needed."""
+    resp = client.post("/api/subscribe", json={
+        "accepts_terms": True, "email": "only@example.org", "wants_email": True,
+        "all_groups": ["statewide"],
+    })
+    assert resp.status_code == 200
+
+
+def test_unknown_and_cps_groups_are_rejected(client):
+    """Unknown slugs are dropped, and "cps" is not accepted here — it has its own
+    all_cps flag, so allowing both would give one subscriber two all-CPS rows."""
+    resp = client.post("/api/subscribe", json={
+        "accepts_terms": True, "email": "bad@example.org", "wants_email": True,
+        "all_groups": ["nonsense", "cps"], "race_slugs": ["d1a"],
+    })
+    assert resp.status_code == 200
+    with db.session_scope() as s:
+        assert {sub.all_group for sub in s.scalars(select(Subscription))} == {None}
+
+
+def test_group_follow_does_not_duplicate_on_resignup(client):
+    for _ in range(2):
+        resp = client.post("/api/subscribe", json={
+            "accepts_terms": True, "email": "dupe@example.org", "wants_email": True,
+            "all_groups": ["statewide"], "race_slugs": ["d1a"],
+        })
+        assert resp.status_code == 200
+    with db.session_scope() as s:
+        subs = s.scalars(select(Subscription)).all()
+        assert len(subs) == 2  # one race row + one group row, not four
+
+
+def test_signup_form_has_a_section_per_group(client):
+    body = client.get("/subscribe").text
+    for heading in ("Chicago Board of Education", "Statewide offices",
+                    "Chicago citywide offices", "Illinois House", "Illinois Senate"):
+        assert heading in body, heading
+    # Small groups render checkboxes; the 177 legislative districts do not.
+    assert 'value="st-gov"' in body and 'value="chi-mayor"' in body
+    assert 'value="hd1"' not in body and 'value="sd1"' not in body
+    assert body.count('class="race-q"') == 2  # one picker per legislative chamber
+    assert 'id="all-cps"' in body
+    assert 'data-group="statewide"' in body
+
+
+def test_race_search_api(client):
+    # A bare number is the common query; it must not bury district 1 under 1x/1xx.
+    results = client.get("/api/races?q=1&group=ilhouse").json()["results"]
+    assert results and results[0]["slug"] == "hd1"
+
+    labels = {r["slug"] for r in client.get("/api/races?q=12&group=ilhouse").json()["results"]}
+    assert "hd12" in labels
+
+    # group scopes the search
+    senate = client.get("/api/races?q=12&group=ilsenate").json()["results"]
+    assert all(r["group"] == "ilsenate" for r in senate)
+
+    assert client.get("/api/races?q=").json() == {"results": []}
+
+
+def test_manage_round_trip_with_groups(client):
+    client.post("/api/subscribe", json={
+        "accepts_terms": True, "email": "m2@example.org", "wants_email": True,
+        "all_groups": ["statewide"],
+    })
+    with db.session_scope() as s:
+        sid = s.scalars(select(Subscriber)).one().id
+    token = tokens.make_token(sid, "manage")
+
+    page = client.get(f"/manage?token={token}")
+    assert page.status_code == 200
+    # The followed group comes back checked.
+    assert 'data-group="statewide"' in page.text
+
+    resp = client.post("/api/manage", json={
+        "token": token, "wants_email": True,
+        "all_groups": ["chicago"], "race_slugs": ["hd12"],
+    })
+    assert resp.status_code == 200
+    with db.session_scope() as s:
+        subs = s.scalars(select(Subscription)).all()
+        assert {x.all_group for x in subs if x.all_group} == {"chicago"}
+        assert {x.race.slug for x in subs if x.race} == {"hd12"}
+
+
+def test_landing_scope_tabs_filter_and_count(client):
+    """Each tab shows only its own filings, and the counts match."""
+    from datetime import UTC, datetime
+
+    from isbe_notifier.models import FeedItem, Filing, FilingRace, Race
+
+    # (feed seq, committee name, race slug or None for a race-less filing)
+    fixtures = [
+        (60, "CPS Cmte", "d3a"),
+        (61, "Gov Cmte", "st-gov"),
+        (62, "AG Cmte", "st-ag"),          # statewide but not the governor tab
+        (63, "Mayor Cmte", "chi-mayor"),
+        (64, "House Cmte", "hd12"),
+        (65, "Senate Cmte", "sd7"),
+        (66, "Unmatched Cmte", None),      # only ever shows under "all"
+    ]
+    with db.session_scope() as s:
+        for seq, name, slug in fixtures:
+            s.add(FeedItem(
+                guid_seq=seq, committee_name=name, report_type="A-1",
+                source="Filed electronically", url=f"https://x.test/{seq}",
+                guid_url=f"https://x.test/{seq}", pub_date=datetime.now(UTC),
+            ))
+            s.flush()
+            filing = Filing(feed_item_seq=seq, report_type="A-1", report_class="A1")
+            s.add(filing)
+            s.flush()
+            if slug:
+                race = s.scalars(select(Race).where(Race.slug == slug)).one()
+                s.add(FilingRace(filing_id=filing.id, race_id=race.id))
+
+    expected = {
+        "cps": {"CPS Cmte"},
+        "governor": {"Gov Cmte"},
+        "mayor": {"Mayor Cmte"},
+        "ga": {"House Cmte", "Senate Cmte"},
+        "statewide": {"Gov Cmte", "AG Cmte"},  # governor is also a statewide office
+        "all": {name for _, name, _ in fixtures},
+    }
+    all_names = {name for _, name, _ in fixtures}
+    for scope, shown in expected.items():
+        body = client.get(f"/?scope={scope}").text
+        for name in shown:
+            assert name in body, f"{name} missing from {scope}"
+        for name in all_names - shown:
+            assert name not in body, f"{name} leaked into {scope}"
+        # The tab strip reports the same number the table shows.
+        assert f"Today's reports in {LANDING_SCOPES[scope]['label']} ({len(shown)})" in body
+
+
+def test_race_groups_are_collapsible_with_cps_open(client):
+    body = client.get("/subscribe").text
+    assert body.count('class="race-group"') == 5
+    # CPS leads the form, so it starts open; the rest start collapsed.
+    assert '<details class="race-group" data-group="cps" open>' in body
+    for group in ("statewide", "chicago", "ilsenate", "ilhouse"):
+        assert f'<details class="race-group" data-group="{group}">' in body, group
+
+
+def test_manage_opens_groups_the_subscriber_already_follows(client):
+    """A collapsed section must never hide an existing selection."""
+    client.post("/api/subscribe", json={
+        "accepts_terms": True, "email": "open@example.org", "wants_email": True,
+        "race_slugs": ["hd12"], "all_groups": ["chicago"],
+    })
+    with db.session_scope() as s:
+        sid = s.scalars(select(Subscriber)).one().id
+    body = client.get(f"/manage?token={tokens.make_token(sid, 'manage')}").text
+
+    # followed via a picked race, and via a whole-group follow
+    assert '<details class="race-group" data-group="ilhouse" open>' in body
+    assert '<details class="race-group" data-group="chicago" open>' in body
+    # untouched groups stay collapsed; CPS still opens as the default
+    assert '<details class="race-group" data-group="ilsenate">' in body
+    assert '<details class="race-group" data-group="cps" open>' in body
+
+
+def test_manage_opens_cps_for_an_all_cps_subscriber(client):
+    client.post("/api/subscribe", json={
+        "accepts_terms": True, "email": "allcps@example.org", "wants_email": True,
+        "all_cps": True,
+    })
+    with db.session_scope() as s:
+        sid = s.scalars(select(Subscriber)).one().id
+    body = client.get(f"/manage?token={tokens.make_token(sid, 'manage')}").text
+    assert '<details class="race-group" data-group="cps" open>' in body
+    assert 'id="all-cps" checked' in body
+
+
+def test_forms_use_a_single_box(client):
+    """Signup, manage and the embed each keep every step in one box."""
+    for path in ("/subscribe", "/embed/subscribe"):
+        assert client.get(path).text.count('<div class="form-box"') == 1, path
+
+
+def test_race_group_summaries_have_no_count_badge(client):
+    body = client.get("/subscribe").text
+    assert "group-count" not in body
+    # the district pickers still name the count in their placeholder
+    assert "Search 118 districts" in body
+
+
+def test_embed_stays_cps_only_and_flat(client):
+    """The WordPress embed is CPS-focused by design and deliberately does NOT
+    share the grouped/collapsible sections the signup page uses."""
+    body = client.get("/embed/subscribe").text
+
+    # No grouped sections, no collapsible groups, no district pickers.
+    assert "race-group" not in body
+    assert "race-q" not in body
+    assert "group-all" not in body
+    assert body.count('<div class="form-box">') == 1
+
+    # Exactly the 21 CPS races, as a flat grid, with the original select-all copy.
+    assert body.count('name="race"') == 21
+    assert "All CPS Board races" in body
+    assert "the president's race and every district" in body
+    for slug in ("st-gov", "chi-mayor", "hd1", "sd1"):
+        assert f'value="{slug}"' not in body, slug
+
+
+def test_all_house_and_senate_select_alls(client):
+    body = client.get("/subscribe").text
+    assert "All Illinois House races" in body
+    assert "All Illinois Senate races" in body
+    # rendered alongside the district search, not instead of it
+    assert body.count('class="race-q"') == 2
+    assert 'class="group-all" data-group="ilhouse"' in body
+    assert 'class="group-all" data-group="ilsenate"' in body
+
+
+def test_following_all_house_races(client):
+    resp = client.post("/api/subscribe", json={
+        "accepts_terms": True, "email": "house@example.org", "wants_email": True,
+        "all_groups": ["ilhouse", "ilsenate"],
+    })
+    assert resp.status_code == 200
+    with db.session_scope() as s:
+        assert {x.all_group for x in s.scalars(select(Subscription))} == {"ilhouse", "ilsenate"}
+
+    # comes back checked, and the section opens so it isn't hidden
+    sid = None
+    with db.session_scope() as s:
+        sid = s.scalars(select(Subscriber)).one().id
+    page = client.get(f"/manage?token={tokens.make_token(sid, 'manage')}").text
+    assert '<details class="race-group" data-group="ilhouse" open>' in page
+    # The checkbox itself must come back checked — the attribute sits on the
+    # line after data-group, so this has to match across the newline.
+    for group in ("ilhouse", "ilsenate"):
+        tag = re.search(rf'<input[^>]*data-group="{group}"[^>]*>', page, re.S)
+        assert tag and "checked" in tag.group(0), group
+    unchecked = re.search(r'<input[^>]*data-group="statewide"[^>]*>', page, re.S)
+    assert unchecked and "checked" not in unchecked.group(0)
+
+    # Re-saving from manage without changing anything must preserve the follows.
+    resp = client.post("/api/manage", json={
+        "token": tokens.make_token(sid, "manage"), "wants_email": True,
+        "all_groups": ["ilhouse", "ilsenate"],
+    })
+    assert resp.status_code == 200
+    with db.session_scope() as s:
+        kept = {x.all_group for x in s.scalars(select(Subscription)) if x.all_group}
+        assert kept == {"ilhouse", "ilsenate"}

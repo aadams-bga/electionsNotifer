@@ -124,6 +124,79 @@
     });
   }
 
+  // --- legislative district pickers ---
+  // One per picker group (Illinois House, Illinois Senate). Same chips-and-
+  // search shape as the committee search above, but scoped per section and
+  // hitting /api/races.
+  function wireRacePicker(root) {
+    const group = root.dataset.group;
+    const input = root.querySelector(".race-q");
+    const results = root.querySelector(".race-results");
+    const chosenList = root.querySelector(".race-chosen");
+    if (!input || !results || !chosenList) return;
+    let timer = null;
+
+    function chosenSlugs() {
+      return Array.from(chosenList.querySelectorAll("li")).map((li) => li.dataset.slug);
+    }
+
+    function add(slug, label) {
+      if (chosenSlugs().includes(slug)) return;
+      const li = document.createElement("li");
+      li.dataset.slug = slug;
+      li.textContent = label + " ";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "remove";
+      btn.textContent = "×";
+      btn.setAttribute("aria-label", "Remove " + label);
+      li.appendChild(btn);
+      chosenList.appendChild(li);
+    }
+
+    chosenList.addEventListener("click", (e) => {
+      if (e.target.classList.contains("remove")) e.target.closest("li").remove();
+    });
+
+    input.addEventListener("input", () => {
+      clearTimeout(timer);
+      const term = input.value.trim();
+      if (!term) { results.hidden = true; return; }
+      timer = setTimeout(async () => {
+        try {
+          const resp = await fetch(
+            "/api/races?group=" + encodeURIComponent(group) +
+            "&q=" + encodeURIComponent(term)
+          );
+          const data = await resp.json();
+          results.innerHTML = "";
+          for (const race of data.results) {
+            const li = document.createElement("li");
+            li.textContent = race.label;
+            li.addEventListener("click", () => {
+              add(race.slug, race.label);
+              results.hidden = true;
+              input.value = "";
+            });
+            results.appendChild(li);
+          }
+          results.hidden = data.results.length === 0;
+        } catch { /* search is best-effort */ }
+      }, 250);
+    });
+  }
+
+  document.querySelectorAll(".race-search").forEach(wireRacePicker);
+
+  function pickedRaceSlugs() {
+    return Array.from(form.querySelectorAll(".race-chosen li")).map((li) => li.dataset.slug);
+  }
+
+  function followedGroups() {
+    return Array.from(form.querySelectorAll(".group-all:checked"))
+      .map((el) => el.dataset.group);
+  }
+
   // --- web push ---
   function b64ToUint8(base64) {
     const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -212,10 +285,12 @@
       wants_email: wantsEmail,
       wants_push: wantsPush,
       race_slugs: Array.from(form.querySelectorAll('input[name="race"]:checked'))
-        .map((el) => el.value),
+        .map((el) => el.value)
+        .concat(pickedRaceSlugs()),
       committee_ids: chosenIds(),
       all_filings: !!(allFilings && allFilings.checked),
       all_cps: !!(allCps && allCps.checked),
+      all_groups: followedGroups(),
       wants_daily_digest: !!(dailyDigest && dailyDigest.checked),
       wants_weekly_digest: !!(weeklyDigest && weeklyDigest.checked),
       accepts_terms: !!(termsChk && termsChk.checked),

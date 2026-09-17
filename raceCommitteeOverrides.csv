@@ -1,0 +1,4 @@
+include,race_slug,committee_id,committee_name,notes
+yes,st-gov,32762,JB for Governor,format example — ISBE already links this, so the row changes nothing
+no,chi-mayor,34953,Susana Mendoza For Mayor,excluded editorially; Susana For Chicago is the committee we follow for this race
+yes,hd7,19328,People for Emanuel Chris Welch,format example — ISBE already links this, so the row changes nothing

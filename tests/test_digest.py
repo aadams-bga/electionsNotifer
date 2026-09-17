@@ -318,3 +318,98 @@ def test_unverified_or_optout_excluded(dbsession, sent_emails):
     dbsession.commit()
     assert digest.run_digest("daily", TODAY) == 0
     assert sent_emails == []
+
+
+def test_group_containment_in_digests(dbsession, sent_emails):
+    """An all_cps subscriber's digest must not pick up statewide races, and a
+    statewide subscriber's must not pick up CPS ones."""
+    race, *_ = _seed_world(dbsession)  # CPS "District 7" filing, seq 1-3
+
+    gov = Race(slug="st-gov", label="Governor", race_group="statewide",
+               sort_order=100, office_district_patterns=[])
+    dbsession.add(gov)
+    dbsession.flush()
+
+    item = FeedItem(
+        guid_seq=90, committee_name="IE Cmte", report_type="B1",
+        source="Filed electronically", url="https://x.test/90",
+        guid_url="https://x.test/90", pub_date=FILED_UTC,
+    )
+    dbsession.add(item)
+    dbsession.flush()
+    gov_filing = Filing(
+        feed_item_seq=90, committee_id=222, report_type="B1",
+        report_class="B1", created_at=FILED_UTC,
+    )
+    dbsession.add(gov_filing)
+    dbsession.flush()
+    dbsession.add(FilingRace(filing_id=gov_filing.id, race_id=gov.id))
+    dbsession.add(FilingLine(
+        filing=gov_filing, kind="expenditure", name="AD BUY", vendor_name="AD BUY",
+        amount=Decimal("9000"), supporting_opposing="Supporting",
+        candidate_name="Pat Statewide", office_district="Governor",
+    ))
+
+    _subscriber(dbsession, "cps@example.org", all_cps=True)
+    sub = Subscriber(
+        email="state@example.org", email_verified_at=datetime.now(UTC),
+        wants_daily_digest=True,
+    )
+    dbsession.add(sub)
+    dbsession.flush()
+    dbsession.add(Subscription(
+        subscriber_id=sub.id, all_group="statewide", wants_email=True,
+    ))
+    dbsession.commit()
+
+    assert digest.run_digest("daily", TODAY) == 2
+    by_to = {to: body for to, _, body, _ in sent_emails}
+
+    cps_body = by_to["cps@example.org"]
+    assert "District 7" in cps_body and "Jane Doe" in cps_body
+    assert "Governor" not in cps_body and "Pat Statewide" not in cps_body
+    assert "every CPS Board race" in cps_body
+
+    state_body = by_to["state@example.org"]
+    assert "Governor" in state_body and "Pat Statewide" in state_body
+    assert "District 7" not in state_body and "Jane Doe" not in state_body
+    assert "every statewide race" in state_body
+
+
+def test_all_house_group_digest(dbsession, sent_emails):
+    """An "all Illinois House races" follower gets every district's filings."""
+    _seed_world(dbsession)  # CPS District 7 filing, seqs 1-3
+
+    hd = Race(slug="hd12", label="Illinois House District 12", race_group="ilhouse",
+              sort_order=512, office_district_patterns=[])
+    dbsession.add(hd)
+    dbsession.flush()
+    dbsession.add(FeedItem(
+        guid_seq=91, committee_name="IE Cmte", report_type="B1",
+        source="Filed electronically", url="https://x.test/91",
+        guid_url="https://x.test/91", pub_date=FILED_UTC,
+    ))
+    dbsession.flush()
+    f = Filing(feed_item_seq=91, committee_id=222, report_type="B1",
+               report_class="B1", created_at=FILED_UTC)
+    dbsession.add(f)
+    dbsession.flush()
+    dbsession.add(FilingRace(filing_id=f.id, race_id=hd.id))
+    dbsession.add(FilingLine(
+        filing=f, kind="expenditure", name="MAILER", vendor_name="MAILER",
+        amount=Decimal("4000"), supporting_opposing="Supporting",
+        candidate_name="Pat Rep", office_district="State Representative 12",
+    ))
+
+    sub = Subscriber(email="house@example.org", email_verified_at=datetime.now(UTC),
+                     wants_daily_digest=True)
+    dbsession.add(sub)
+    dbsession.flush()
+    dbsession.add(Subscription(subscriber_id=sub.id, all_group="ilhouse", wants_email=True))
+    dbsession.commit()
+
+    assert digest.run_digest("daily", TODAY) == 1
+    _, _, body, _ = sent_emails[0]
+    assert "Illinois House District 12" in body and "Pat Rep" in body
+    assert "every Illinois House race" in body
+    assert "District 7" not in body  # CPS is a different group

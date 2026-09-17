@@ -11,7 +11,9 @@ COPY pyproject.toml uv.lock ./
 RUN uv export --frozen --no-dev --no-emit-project > requirements.txt \
     && uv pip install --system -r requirements.txt
 
-COPY alembic.ini docker-entrypoint.sh ./
+# raceCommitteeOverrides.csv is read at runtime by race_mapping; without it
+# in the image the overrides are silently ignored in production.
+COPY alembic.ini docker-entrypoint.sh raceCommitteeOverrides.csv ./
 COPY migrations ./migrations
 COPY src ./src
 RUN uv pip install --system --no-deps . && chmod +x docker-entrypoint.sh

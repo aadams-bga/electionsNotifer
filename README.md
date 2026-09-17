@@ -19,6 +19,30 @@ uv run python -m isbe_notifier.poller  # run the engine (console email backend b
 uv run uvicorn isbe_notifier.web.app:app --reload   # run the web app on :8000
 ```
 
+### Committee ↔ race links
+
+The poller refreshes these from ISBE's bulk data daily, so new candidates are
+picked up automatically. `raceCommitteeOverrides.csv` is the editorial override
+list on top of that — exceptions only, not a copy of every link:
+
+```csv
+include,race_slug,committee_id,committee_name,notes
+no,hd18,16109,Holland & Knight LLP PAC,linked via Gabel but not about this district
+yes,chi-mayor,12345,Some Committee,editorially relevant; ISBE doesn't link it
+```
+
+`no` blocks a link and removes it if already present, and it stays blocked however
+often the sync runs. `yes` forces one ISBE doesn't propose. Anything not listed
+just follows ISBE.
+
+```bash
+uv run python -m isbe_notifier.race_mapping review --suspect  # links worth a look
+uv run python -m isbe_notifier.race_mapping review --csv out.csv
+uv run python -m isbe_notifier.race_mapping sync --dry-run    # preview a sync
+```
+
+CPS isn't covered here — it keeps the curated `committeeWhitelist.csv`.
+
 Copy `.env.example` to `.env` to override settings. With `EMAIL_BACKEND=console`
 (the default) emails are logged, not sent — no AWS account needed for development.
 
@@ -28,6 +52,8 @@ Copy `.env.example` to `.env` to override settings. With `EMAIL_BACKEND=console`
 - `src/isbe_notifier/poller.py` — the engine: poll → dedupe → scrape → resolve committee →
   match → notify. First run bootstraps the existing feed backlog without scraping it.
 - `src/isbe_notifier/matching.py` — committee follows + B-1 "Office – District" race matching
+- `src/isbe_notifier/race_mapping.py` — syncs committee↔race links from ISBE bulk
+  data (daily, in the poller), subject to `raceCommitteeOverrides.csv`. See below.
 - `src/isbe_notifier/notify/` — content builder, SES/console email, web push, signed tokens
 - `src/isbe_notifier/web/` — FastAPI signup PWA, verify/manage/unsubscribe, admin
 - `migrations/` — Alembic; `tests/fixtures/` — captured ISBE HTML/XML used by tests

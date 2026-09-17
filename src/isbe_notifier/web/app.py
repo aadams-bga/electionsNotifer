@@ -1,3 +1,5 @@
+import csv
+import io
 import logging
 from datetime import UTC, datetime, timedelta
 from datetime import time as dtime
@@ -5,7 +7,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, EmailStr, Field
@@ -30,6 +32,7 @@ from ..models import (
 )
 from ..notify import tokens
 from ..notify.emailer import send_admin_email, send_email
+from ..seeds import RACE_GROUPS
 
 CENTRAL = ZoneInfo("America/Chicago")
 TODAY_LIST_CAP = 500
@@ -78,14 +81,95 @@ async def security_headers(request: Request, call_next):
     return response
 
 
-def _races(session) -> list[Race]:
-    return list(session.scalars(select(Race).order_by(Race.sort_order)))
+def _races(session, groups: tuple[str, ...] = ("cps",)) -> list[Race]:
+    """Flat list of races in the given groups, in display order."""
+    return list(
+        session.scalars(
+            select(Race).where(Race.race_group.in_(groups)).order_by(Race.sort_order)
+        )
+    )
 
 
-def _todays_filing_rows(session, scope: str) -> tuple[list[dict], int, int]:
-    """Today's (Central time) feed items, newest first, with CPS race labels.
+def _valid_groups(requested: list[str]) -> list[str]:
+    """Known group slugs from a request, order preserved, duplicates dropped.
 
-    Returns (rows for the requested scope, statewide count, CPS count)."""
+    CPS is excluded: it has its own all_cps flag, and accepting it here too would
+    let one subscriber hold two different "all CPS" rows.
+    """
+    seen, out = set(), []
+    for slug in requested:
+        if slug in RACE_GROUPS and slug != "cps" and slug not in seen:
+            seen.add(slug)
+            out.append(slug)
+    return out
+
+
+def _race_sections(
+    session,
+    selected_slugs: set[str] | None = None,
+    selected_groups: set[str] | None = None,
+) -> list[dict]:
+    """Races arranged into the signup form's sections, in RACE_GROUPS order.
+
+    Picker groups (the 118 House and 59 Senate districts) carry no `races` list:
+    rendering 177 checkboxes would bury the rest of the form, so the template
+    gives them a search box and the client fetches from /api/races instead. Any
+    races the subscriber already follows are still passed through as `chosen` so
+    manage can show them.
+
+    Sections render collapsed unless `start_open`. CPS leads the form so it opens
+    by default, and anything the subscriber already follows opens too — a
+    collapsed section must never hide a selection someone has made.
+    """
+    selected_slugs = selected_slugs or set()
+    selected_groups = selected_groups or set()
+    by_group: dict[str, list[Race]] = {}
+    for race in session.scalars(select(Race).order_by(Race.sort_order)):
+        by_group.setdefault(race.race_group, []).append(race)
+
+    sections = []
+    for slug, meta in RACE_GROUPS.items():
+        races = by_group.get(slug, [])
+        chosen = [r for r in races if r.slug in selected_slugs]
+        has_selection = bool(chosen) or slug in selected_groups
+        sections.append(
+            {
+                "slug": slug,
+                "heading": meta["heading"],
+                "picker": meta["picker"],
+                "select_all": meta["select_all"],
+                "select_all_label": meta.get("select_all_label"),
+                "races": [] if meta["picker"] else races,
+                "chosen": chosen,
+                "count": len(races),
+                "has_selection": has_selection,
+                "start_open": slug == "cps" or has_selection,
+            }
+        )
+    return sections
+
+
+# Landing-page tabs, in display order. A scope selects filings by race group,
+# by specific race slug, or both — "Governor" and "Chicago Mayor" are single
+# races rather than whole groups, so scopes can't just be groups. "all" matches
+# everything, including filings tied to no race at all.
+LANDING_SCOPES: dict[str, dict] = {
+    "cps": {"label": "CPS Board", "groups": ("cps",), "slugs": ()},
+    "governor": {"label": "Governor", "groups": (), "slugs": ("st-gov",)},
+    "mayor": {"label": "Chicago Mayor", "groups": (), "slugs": ("chi-mayor",)},
+    "ga": {"label": "General Assembly", "groups": ("ilhouse", "ilsenate"), "slugs": ()},
+    "statewide": {"label": "Statewide", "groups": ("statewide",), "slugs": ()},
+    "all": {"label": "All filings", "groups": (), "slugs": ()},
+}
+DEFAULT_SCOPE = "cps"
+
+
+def _todays_filing_rows(session, scope: str) -> tuple[list[dict], dict[str, int], bool]:
+    """Today's (Central time) feed items, newest first, with race labels.
+
+    Returns (rows for the requested scope, per-scope counts, capped). Counts are
+    computed for every scope in the same pass so the tab strip can show them all
+    without re-querying."""
     today_ct = datetime.now(CENTRAL).date()
     lo = datetime.combine(today_ct, dtime.min, tzinfo=CENTRAL).astimezone(UTC)
     hi = lo + timedelta(days=1)
@@ -98,6 +182,8 @@ def _todays_filing_rows(session, scope: str) -> tuple[list[dict], int, int]:
 
     filings = {}
     labels: dict[int, list[str]] = {}
+    groups_by_filing: dict[int, set[str]] = {}
+    slugs_by_filing: dict[int, set[str]] = {}
     if items:
         filings = {
             f.feed_item_seq: f
@@ -106,21 +192,35 @@ def _todays_filing_rows(session, scope: str) -> tuple[list[dict], int, int]:
             )
         }
         if filings:
-            for filing_id, label in session.execute(
-                select(FilingRace.filing_id, Race.label)
+            for filing_id, label, group, slug in session.execute(
+                select(FilingRace.filing_id, Race.label, Race.race_group, Race.slug)
                 .join(Race, Race.id == FilingRace.race_id)
                 .where(FilingRace.filing_id.in_([f.id for f in filings.values()]))
                 .order_by(Race.sort_order)
             ):
                 labels.setdefault(filing_id, []).append(label)
+                groups_by_filing.setdefault(filing_id, set()).add(group)
+                slugs_by_filing.setdefault(filing_id, set()).add(slug)
 
-    rows, cps_count = [], 0
+    def in_scope(filing, scope_slug: str) -> bool:
+        if scope_slug == "all":
+            return True
+        if filing is None:
+            return False
+        spec = LANDING_SCOPES[scope_slug]
+        return bool(
+            groups_by_filing.get(filing.id, set()).intersection(spec["groups"])
+            or slugs_by_filing.get(filing.id, set()).intersection(spec["slugs"])
+        )
+
+    counts = dict.fromkeys(LANDING_SCOPES, 0)
+    rows = []
     for item in items:
         filing = filings.get(item.guid_seq)
-        race_labels = labels.get(filing.id, []) if filing else []
-        if race_labels:
-            cps_count += 1
-        elif scope != "all":
+        for scope_slug in LANDING_SCOPES:
+            if in_scope(filing, scope_slug):
+                counts[scope_slug] += 1
+        if not in_scope(filing, scope):
             continue
         pub = item.pub_date
         if pub is not None and pub.tzinfo is None:  # SQLite in tests returns naive UTC
@@ -131,28 +231,34 @@ def _todays_filing_rows(session, scope: str) -> tuple[list[dict], int, int]:
                 "committee_name": item.committee_name,
                 "report_type": item.report_type,
                 "url": item.url or item.guid_url,
-                "race_labels": race_labels,
+                "race_labels": labels.get(filing.id, []) if filing else [],
             }
         )
-    return rows, len(items), cps_count
+    return rows, counts, len(items) >= TODAY_LIST_CAP
 
 
 @app.get("/", response_class=HTMLResponse)
-def landing(request: Request, scope: str = "cps"):
+def landing(request: Request, scope: str = DEFAULT_SCOPE):
     settings = get_settings()
-    scope = "all" if scope == "all" else "cps"
+    if scope not in LANDING_SCOPES:
+        scope = DEFAULT_SCOPE
     with session_scope() as session:
-        rows, total_count, cps_count = _todays_filing_rows(session, scope)
+        rows, counts, capped = _todays_filing_rows(session, scope)
         return templates.TemplateResponse(
             request,
             "landing.html",
             {
                 "site_name": settings.site_name,
                 "scope": scope,
+                "scope_label": LANDING_SCOPES[scope]["label"],
+                "scopes": [
+                    {"slug": slug, "label": spec["label"], "count": counts[slug]}
+                    for slug, spec in LANDING_SCOPES.items()
+                ],
                 "rows": rows,
-                "total_count": total_count,
-                "cps_count": cps_count,
-                "capped": total_count >= TODAY_LIST_CAP,
+                "count": counts[scope],
+                "show_race_column": any(r["race_labels"] for r in rows),
+                "capped": capped,
             },
         )
 
@@ -161,12 +267,11 @@ def landing(request: Request, scope: str = "cps"):
 def subscribe_page(request: Request):
     settings = get_settings()
     with session_scope() as session:
-        races = _races(session)
         return templates.TemplateResponse(
             request,
             "subscribe.html",
             {
-                "races": races,
+                "race_sections": _race_sections(session),
                 "site_name": settings.site_name,
                 "vapid_public_key": settings.vapid_public_key,
             },
@@ -177,12 +282,13 @@ def subscribe_page(request: Request):
 def embed_subscribe_page(request: Request):
     settings = get_settings()
     with session_scope() as session:
-        races = _races(session)
         return templates.TemplateResponse(
             request,
             "embed_subscribe.html",
             {
-                "races": races,
+                # The WordPress embed is CPS-only by design and stays a flat
+                # checkbox grid — it does not get the grouped sections.
+                "races": _races(session, ("cps",)),
                 "site_name": settings.site_name,
                 "vapid_public_key": settings.vapid_public_key,
             },
@@ -256,10 +362,13 @@ class SubscribeRequest(BaseModel):
     email: EmailStr | None = None
     wants_email: bool = False
     wants_push: bool = False
-    race_slugs: list[str] = Field(default_factory=list, max_length=50)
+    race_slugs: list[str] = Field(default_factory=list, max_length=250)
     committee_ids: list[int] = Field(default_factory=list, max_length=100)
     all_filings: bool = False
     all_cps: bool = False
+    # "Follow every race in this group" for the non-CPS groups; CPS keeps using
+    # all_cps so existing subscriptions and older clients are unaffected.
+    all_groups: list[str] = Field(default_factory=list, max_length=10)
     wants_daily_digest: bool = False
     wants_weekly_digest: bool = False
     accepts_terms: bool = False
@@ -282,8 +391,13 @@ def subscribe(request: Request, payload: SubscribeRequest):
         or payload.wants_weekly_digest
     ):
         raise HTTPException(400, "Choose real-time alerts, a daily summary, or a weekly summary.")
+    groups = _valid_groups(payload.all_groups)
     if not (
-        payload.race_slugs or payload.committee_ids or payload.all_filings or payload.all_cps
+        payload.race_slugs
+        or payload.committee_ids
+        or payload.all_filings
+        or payload.all_cps
+        or groups
     ):
         raise HTTPException(400, "Choose at least one race or committee to follow.")
 
@@ -322,19 +436,19 @@ def subscribe(request: Request, payload: SubscribeRequest):
             is_new = True
 
         existing = {
-            (s.race_id, s.committee_id): s
+            (s.race_id, s.committee_id, s.all_group): s
             for s in session.scalars(
                 select(Subscription).where(Subscription.subscriber_id == subscriber.id)
             )
         }
         for race in races:
-            key = (race.id, None)
+            key = (race.id, None, None)
             sub = existing.get(key) or Subscription(subscriber_id=subscriber.id, race_id=race.id)
             sub.wants_email = sub.wants_email or payload.wants_email
             sub.wants_push = sub.wants_push or payload.wants_push
             session.add(sub)
         for committee in committees:
-            key = (None, committee.id)
+            key = (None, committee.id, None)
             sub = existing.get(key) or Subscription(
                 subscriber_id=subscriber.id, committee_id=committee.id
             )
@@ -343,9 +457,17 @@ def subscribe(request: Request, payload: SubscribeRequest):
             session.add(sub)
         if payload.all_filings or payload.all_cps:
             # Single "flags row" (race_id and committee_id both NULL) carries both.
-            sub = existing.get((None, None)) or Subscription(subscriber_id=subscriber.id)
+            sub = existing.get((None, None, None)) or Subscription(subscriber_id=subscriber.id)
             sub.all_filings = sub.all_filings or payload.all_filings
             sub.all_cps = sub.all_cps or payload.all_cps
+            sub.wants_email = sub.wants_email or payload.wants_email
+            sub.wants_push = sub.wants_push or payload.wants_push
+            session.add(sub)
+        for group in groups:
+            # One row per followed group, each its own race_id/committee_id-NULL row.
+            sub = existing.get((None, None, group)) or Subscription(
+                subscriber_id=subscriber.id, all_group=group
+            )
             sub.wants_email = sub.wants_email or payload.wants_email
             sub.wants_push = sub.wants_push or payload.wants_push
             session.add(sub)
@@ -375,6 +497,7 @@ def subscribe(request: Request, payload: SubscribeRequest):
         follows = [race.label for race in races]
         if payload.all_cps:
             follows.append("All CPS Board races")
+        follows.extend(f"All {RACE_GROUPS[g]['heading']}" for g in groups)
         if payload.all_filings:
             follows.append("The firehose (every statewide filing)")
         follows.extend(c.name for c in committees)
@@ -441,7 +564,6 @@ def manage(request: Request, token: str):
         subscriber = session.get(Subscriber, subscriber_id) if subscriber_id else None
         if subscriber is None:
             return _message(request, "That link is invalid or has expired.", error=True)
-        races = _races(session)
         subs = session.scalars(
             select(Subscription).where(Subscription.subscriber_id == subscriber.id)
         ).all()
@@ -456,8 +578,14 @@ def manage(request: Request, token: str):
                 "token": token,
                 "unsubscribe_url": tokens.unsubscribe_url(subscriber.id),
                 "email": subscriber.email,
-                "races": races,
+                "race_sections": _race_sections(
+                    session,
+                    {s.race.slug for s in subs if s.race},
+                    {s.all_group for s in subs if s.all_group}
+                    | ({"cps"} if any(s.all_cps for s in subs) else set()),
+                ),
                 "selected_race_slugs": {s.race.slug for s in subs if s.race},
+                "selected_groups": {s.all_group for s in subs if s.all_group},
                 "followed_committees": followed_committees,
                 "all_filings": any(s.all_filings for s in subs),
                 "all_cps": any(s.all_cps for s in subs),
@@ -494,6 +622,15 @@ def update_subscriptions(request: Request, payload: ManageRequest):
                     subscriber_id=subscriber.id,
                     all_filings=payload.all_filings,
                     all_cps=payload.all_cps,
+                    wants_email=payload.wants_email,
+                    wants_push=payload.wants_push,
+                )
+            )
+        for group in _valid_groups(payload.all_groups):
+            session.add(
+                Subscription(
+                    subscriber_id=subscriber.id,
+                    all_group=group,
                     wants_email=payload.wants_email,
                     wants_push=payload.wants_push,
                 )
@@ -579,6 +716,34 @@ def search_committees(request: Request, q: str = ""):
         }
 
 
+@app.get("/api/races")
+@limiter.limit("120/hour")
+def search_races(request: Request, q: str = "", group: str = ""):
+    """Race lookup for the legislative-district pickers.
+
+    A bare district number is the common search. Substring matching alone would
+    let "1" return districts 1, 10-19 and 100-118, so an exact-district clause is
+    OR'd in to guarantee the exact match is in the page of results even when the
+    substring hits overflow the limit; sort_order then lists it first.
+    """
+    q = q.strip()
+    if not q:
+        return {"results": []}
+    with session_scope() as session:
+        clauses = [Race.label.ilike(f"%{q}%")]
+        if q.isdigit():
+            clauses.append(Race.label.ilike(f"% District {int(q)}"))
+        stmt = select(Race).where(or_(*clauses))
+        if group in RACE_GROUPS:
+            stmt = stmt.where(Race.race_group == group)
+        rows = session.scalars(stmt.order_by(Race.sort_order).limit(20)).all()
+        return {
+            "results": [
+                {"slug": r.slug, "label": r.label, "group": r.race_group} for r in rows
+            ]
+        }
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin(request: Request, token: str = ""):
     settings = get_settings()
@@ -605,6 +770,30 @@ def admin(request: Request, token: str = ""):
                 "counts": counts,
                 "recent": recent,
             },
+        )
+
+
+@app.get("/admin/export/marketing.csv")
+def admin_export_marketing(token: str = ""):
+    settings = get_settings()
+    if not settings.admin_token or token != settings.admin_token:
+        raise HTTPException(404)
+    with session_scope() as session:
+        rows = session.execute(
+            select(Subscriber.email, Subscriber.created_at)
+            .where(Subscriber.marketing_opt_in.is_(True))
+            .where(Subscriber.email.is_not(None))
+            .order_by(Subscriber.email)
+        ).all()
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(["email", "created_at"])
+        writer.writerows(rows)
+        buf.seek(0)
+        return StreamingResponse(
+            buf,
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=marketing_subscribers.csv"},
         )
 
 

@@ -4,17 +4,7 @@
   <div class="form-box">
   <section>
     <h2>1. Which races do you want to follow?</h2>
-    <label class="race all-cps">
-      <input type="checkbox" id="all-cps"> <strong>All CPS Board races</strong> —
-      the president's race and every district
-    </label>
-    <div class="race-grid">
-      {% for race in races %}
-      <label class="race">
-        <input type="checkbox" name="race" value="{{ race.slug }}"> {{ race.label }}
-      </label>
-      {% endfor %}
-    </div>
+    {% include "_race_sections.html" %}
   </section>
 
   <section>
@@ -94,4 +84,4 @@
   <p id="form-status" role="status"></p>
 </form>
 {% endblock %}
-{% block scripts %}<script src="/static/app.js?v=4"></script>{% endblock %}
+{% block scripts %}<script src="/static/app.js?v=5"></script>{% endblock %}

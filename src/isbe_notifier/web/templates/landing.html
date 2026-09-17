@@ -1,17 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
 <section>
-  {% if scope == "cps" %}
-  <h2>Today's reports in CPS Board races ({{ cps_count }})</h2>
-  {% else %}
-  <h2>Today's reports statewide ({{ total_count }}{% if capped %}+{% endif %})</h2>
-  <p class="scope-toggle"><a href="/">← Back to CPS Board races ({{ cps_count }})</a></p>
-  {% endif %}
+  <nav class="scope-tabs" aria-label="Filter today's filings">
+    {% for s in scopes %}
+    <a href="{% if s.slug == 'cps' %}/{% else %}/?scope={{ s.slug }}{% endif %}"
+       {% if s.slug == scope %}class="active" aria-current="page"{% endif %}>
+      {{ s.label }} <span class="count">{{ s.count }}{% if s.slug == 'all' and capped %}+{% endif %}</span>
+    </a>
+    {% endfor %}
+  </nav>
+
+  <h2>Today's reports in {{ scope_label }} ({{ count }}{% if scope == 'all' and capped %}+{% endif %})</h2>
 
   {% if rows %}
   <table class="filings">
     <thead>
-      <tr><th>Time</th><th>Committee</th><th>Report</th>{% if scope == "cps" or cps_count %}<th>Race</th>{% endif %}</tr>
+      <tr><th>Time</th><th>Committee</th><th>Report</th>{% if show_race_column %}<th>Race</th>{% endif %}</tr>
     </thead>
     <tbody>
       {% for row in rows %}
@@ -19,7 +23,7 @@
         <td class="nowrap">{{ row.time }}</td>
         <td>{{ row.committee_name }}</td>
         <td><a href="{{ row.url }}" target="_blank" rel="noopener">{{ row.report_type }}</a></td>
-        {% if scope == "cps" or cps_count %}
+        {% if show_race_column %}
         <td>{{ row.race_labels | join(", ") }}</td>
         {% endif %}
       </tr>
@@ -32,14 +36,9 @@
   {% endif %}
   {% else %}
   <p class="hint">
-    {% if scope == "cps" %}No reports tied to a CPS Board race yet today.
-    {% else %}No reports filed yet today.{% endif %}
+    {% if scope == 'all' %}No reports filed yet today.
+    {% else %}No reports tied to {{ scope_label }} yet today.{% endif %}
   </p>
-  {% endif %}
-
-  {% if scope == "cps" %}
-  <p class="hint">Advanced:
-    <a href="/?scope=all">see all of today's statewide filings ({{ total_count }}{% if capped %}+{% endif %})</a></p>
   {% endif %}
 </section>
 {% endblock %}

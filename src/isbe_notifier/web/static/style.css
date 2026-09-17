@@ -190,31 +190,58 @@ button:disabled { opacity: 0.55; cursor: wait; }
   gap: 0.25rem 0.75rem;
 }
 .race, .channel { display: block; padding: 0.25rem 0; }
-.all-cps { margin-bottom: 0.5rem; }
+.select-all { margin-bottom: 0.5rem; }
+
+/* One collapsible block per race group (CPS, statewide, Chicago, House,
+   Senate), separated by hairlines so the five groups read as a list. */
+details.race-group + details.race-group { border-top: 1px solid var(--border); }
+details.race-group > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.7rem 0;
+  font-size: 0.8rem; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--navy);
+}
+details.race-group > summary::-webkit-details-marker { display: none; }
+details.race-group > summary::before {
+  content: "\25B8";                       /* ▸, rotates to ▾ when open */
+  display: inline-block;
+  font-size: 0.85rem;
+  transition: transform 120ms ease-in-out;
+}
+details.race-group[open] > summary::before { transform: rotate(90deg); }
+details.race-group > summary:hover { color: var(--navy-dark); }
+.race-group-body { padding: 0 0 0.9rem 1.35rem; }
+
+.race-search { position: relative; }
+.race-search .race-q { width: 100%; }
 
 /* ── Committee search ────────────────────────────────── */
 .committee-search { position: relative; }
-#committee-results {
+#committee-results, .race-results {
   list-style: none; margin: 0; padding: 0;
   border: 1px solid var(--border); border-top: 2px solid var(--navy);
   background: #fff; max-height: 240px; overflow-y: auto;
 }
-#committee-results li { padding: 0.5rem 0.75rem; cursor: pointer; }
-#committee-results li:hover { background: var(--bg-subtle); }
-#committee-chosen { list-style: none; margin: 0.5rem 0 0; padding: 0; }
-#committee-chosen li {
+#committee-results li, .race-results li { padding: 0.5rem 0.75rem; cursor: pointer; }
+#committee-results li:hover, .race-results li:hover { background: var(--bg-subtle); }
+#committee-chosen, .race-chosen { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+#committee-chosen li, .race-chosen li {
   display: inline-block;
   background: var(--navy); color: #fff;
   border-radius: 0;
   padding: 0.2rem 0.7rem; margin: 0.15rem; font-size: 0.875rem;
 }
-#committee-chosen button.remove {
+#committee-chosen button.remove, .race-chosen button.remove {
   background: none; padding: 0 0 0 0.4rem;
   font-size: 1rem; line-height: 1;
   letter-spacing: 0; text-transform: none;
   color: rgba(255, 255, 255, 0.75); font-weight: normal;
 }
-#committee-chosen button.remove:hover { background: none; color: #fff; }
+#committee-chosen button.remove:hover,
+.race-chosen button.remove:hover { background: none; color: #fff; }
 
 /* ── Messages ────────────────────────────────────────── */
 .message { font-size: 1.05rem; background: #fff; border: 1px solid var(--border); padding: 1.25rem; }
@@ -234,6 +261,33 @@ tr:last-child td { border-bottom: none; }
 .filings td a { color: var(--link); font-weight: 500; }
 .nowrap { white-space: nowrap; }
 .scope-toggle { font-size: 0.875rem; margin-bottom: 0.5rem; }
+
+/* ── Landing-page scope tabs ─────────────────────────── */
+.scope-tabs {
+  display: flex; flex-wrap: wrap; gap: 0.25rem;
+  margin: 0 0 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.scope-tabs a {
+  text-decoration: none;
+  color: var(--navy);
+  font-size: 0.78rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 0.45rem 0.7rem;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+}
+.scope-tabs a:hover { background: var(--bg-subtle); }
+.scope-tabs a.active {
+  border-bottom-color: var(--gold);
+  color: var(--text);
+}
+.scope-tabs .count {
+  color: var(--muted, #667);
+  font-weight: 400;
+}
+.scope-tabs a.active .count { color: var(--navy); }
 
 /* ── CTA link-buttons (landing page) ────────────────── */
 .hero p { margin: 0.5rem 0; }

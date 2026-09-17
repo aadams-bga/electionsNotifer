@@ -129,6 +129,9 @@ class Race(Base):
     slug: Mapped[str] = mapped_column(String(50), unique=True)
     label: Mapped[str] = mapped_column(String(200))
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    # Which signup-form section this race belongs to; see seeds.RACE_GROUPS.
+    # Named race_group because "group" is a SQL reserved word.
+    race_group: Mapped[str] = mapped_column(String(20), default="cps", index=True)
     # Case-insensitive substrings matched against B-1 "Office - District" values.
     office_district_patterns: Mapped[list] = mapped_column(JSON, default=list)
 
@@ -189,6 +192,10 @@ class Subscription(Base):
     # Shares the race_id/committee_id-NULL "flags row" with all_filings because of
     # the uq_sub_target constraint.
     all_cps: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Follow every race in one group (races.race_group), e.g. "statewide". The CPS
+    # equivalent stays the older all_cps boolean so live subscriptions need no data
+    # migration. NULL means "not a group subscription".
+    all_group: Mapped[str | None] = mapped_column(String(20), index=True)
     wants_email: Mapped[bool] = mapped_column(Boolean, default=True)
     wants_push: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

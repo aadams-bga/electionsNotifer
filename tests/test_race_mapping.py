@@ -288,3 +288,25 @@ def test_overrides_file_is_shipped_in_the_docker_image():
     # And the path the code derives must match where the image puts it.
     assert race_mapping.OVERRIDES_CSV == repo / "raceCommitteeOverrides.csv"
     assert race_mapping.OVERRIDES_CSV.exists()
+
+
+def test_shipped_overrides_reference_real_races():
+    """A typo'd race_slug is silently ignored by read_overrides, so a blocked
+    committee would quietly stay linked. This catches it at CI time instead."""
+    import csv as _csv
+
+    from isbe_notifier.seeds import all_races
+
+    slugs = {r["slug"] for r in all_races()}
+    with open(race_mapping.OVERRIDES_CSV, newline="") as fh:
+        rows = list(_csv.DictReader(fh))
+
+    assert rows, "the shipped overrides file should at least carry its examples"
+    for row in rows:
+        assert row["include"].strip() in ("yes", "no"), row
+        assert row["race_slug"].strip() in slugs, f"unknown race_slug: {row['race_slug']}"
+        assert row["committee_id"].strip().isdigit(), row
+        assert row["notes"].strip(), f"every override should say why: {row}"
+
+    # Every row must survive parsing — a dropped row is a silent no-op.
+    assert len(race_mapping.read_overrides()) == len(rows)

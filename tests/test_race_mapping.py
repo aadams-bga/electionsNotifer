@@ -273,21 +273,39 @@ def test_missing_overrides_file_is_a_no_op(tmp_path):
     assert race_mapping.read_overrides(tmp_path / "nope.csv") == {}
 
 
-def test_overrides_file_is_shipped_in_the_docker_image():
-    """The image must contain the overrides CSV.
+def test_overrides_file_is_found_the_way_production_finds_it():
+    """Guards the bug that made overrides a no-op in production for a week.
 
-    race_mapping reads it at runtime and treats a missing file as "no
-    overrides", so leaving it out of the Dockerfile wouldn't fail the build or
-    the deploy — every editorial override would just quietly stop applying in
-    production while working fine locally.
+    The image pip-installs the package into site-packages, so a path derived
+    from __file__ lands in the interpreter's lib directory, not /app where the
+    CSV is COPYed. Nothing errors — read_overrides just returns {} — so the
+    only symptom was "0 blocked" in a log nobody was reading.
     """
     repo = pathlib.Path(__file__).resolve().parents[1]
-    dockerfile = (repo / "Dockerfile").read_text()
-    assert "raceCommitteeOverrides.csv" in dockerfile
 
-    # And the path the code derives must match where the image puts it.
-    assert race_mapping.OVERRIDES_CSV == repo / "raceCommitteeOverrides.csv"
-    assert race_mapping.OVERRIDES_CSV.exists()
+    # The image must actually carry the file...
+    assert "raceCommitteeOverrides.csv" in (repo / "Dockerfile").read_text()
+    # ...at the working directory the entrypoint runs from.
+    assert "WORKDIR /app" in (repo / "Dockerfile").read_text()
+
+    # Resolution must work from the working directory, which is how the
+    # container finds it — not only from the source-tree layout.
+    import os as _os
+
+    prev = pathlib.Path.cwd()
+    try:
+        _os.chdir(repo)
+        assert race_mapping._default_overrides_path() == repo / "raceCommitteeOverrides.csv"
+        assert race_mapping.read_overrides()  # non-empty: the shipped file parses
+    finally:
+        _os.chdir(prev)
+
+
+def test_missing_overrides_file_warns(tmp_path, caplog):
+    """Silence is what hid the production bug; a missing file must be loud."""
+    with caplog.at_level("WARNING"):
+        assert race_mapping.read_overrides(tmp_path / "nope.csv") == {}
+    assert "no overrides file" in caplog.text
 
 
 def test_shipped_overrides_reference_real_races():

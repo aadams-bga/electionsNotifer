@@ -48,6 +48,7 @@ import argparse
 import csv
 import io
 import logging
+import os
 import re
 from pathlib import Path
 
@@ -62,9 +63,31 @@ logger = logging.getLogger(__name__)
 
 BASE = "https://elections.il.gov/CampaignDisclosureDataFiles"
 
+def _default_overrides_path() -> Path:
+    """Locate the overrides CSV in both the repo and the deployed image.
+
+    Deriving it from __file__ alone is wrong in production: the package is
+    pip-installed into site-packages, so parents[2] resolves to the
+    interpreter's lib directory rather than the repo, and the file COPYed to
+    /app is never found. That failure is invisible — a missing file just means
+    "no overrides" — so check the working directory (WORKDIR /app in the image)
+    before falling back to the source-tree layout, and let an env var win.
+    """
+    candidates = []
+    env = os.environ.get("RACE_OVERRIDES_CSV")
+    if env:
+        candidates.append(Path(env))
+    candidates.append(Path.cwd() / "raceCommitteeOverrides.csv")
+    candidates.append(Path(__file__).resolve().parents[2] / "raceCommitteeOverrides.csv")
+    for path in candidates:
+        if path.exists():
+            return path
+    return candidates[-1]
+
+
 # Editorial overrides, checked into the repo next to committeeWhitelist.csv.
 # Exceptions only — everything not listed follows ISBE.
-OVERRIDES_CSV = Path(__file__).resolve().parents[2] / "raceCommitteeOverrides.csv"
+OVERRIDES_CSV = _default_overrides_path()
 
 OVERRIDE_COLUMNS = [
     "include", "race_slug", "committee_id", "committee_name", "notes",
@@ -218,9 +241,18 @@ def build_mappings(
     return mappings
 
 
-def read_overrides(path: Path = OVERRIDES_CSV) -> dict[tuple[int, str], str]:
-    """(committee_id, race_slug) -> "yes" | "no". Missing file means no overrides."""
-    if not Path(path).exists():
+def read_overrides(path: Path | None = None) -> dict[tuple[int, str], str]:
+    """(committee_id, race_slug) -> "yes" | "no".
+
+    A missing file means no overrides, which is a legitimate state but also what
+    a misconfigured path looks like — so say so loudly rather than silently
+    applying nothing.
+    """
+    path = Path(path) if path is not None else _default_overrides_path()
+    if not path.exists():
+        logger.warning(
+            "no overrides file at %s — every ISBE-proposed link will be applied", path
+        )
         return {}
     overrides: dict[tuple[int, str], str] = {}
     with open(path, newline="") as fh:
@@ -237,7 +269,7 @@ def sync_race_committees(
     client: httpx.Client | None = None,
     min_election_year: int = MIN_ELECTION_YEAR,
     dry_run: bool = False,
-    overrides_path: Path = OVERRIDES_CSV,
+    overrides_path: Path | None = None,
 ) -> dict[str, int]:
     """Refresh links from ISBE, with raceCommitteeOverrides.csv having final say.
 
@@ -340,7 +372,7 @@ def _group_slugs(group: str) -> set[str]:
 def mapping_report(
     client: httpx.Client | None = None,
     min_election_year: int = MIN_ELECTION_YEAR,
-    overrides_path: Path = OVERRIDES_CSV,
+    overrides_path: Path | None = None,
 ) -> list[dict]:
     """Every proposed link with the committee name, race label and the candidacy
     that justifies it — the reviewable form of what the sync would write."""

@@ -11,6 +11,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
+        with:
+          # Pinned: requires-python allows anything >=3.13, so an
+          # unpinned runner drifts to the newest CPython and fails on
+          # dependencies that have no wheels for it yet.
+          python-version: "3.13"
       - run: uv sync --frozen
       - run: uv run ruff check .
       - run: uv run pytest -q

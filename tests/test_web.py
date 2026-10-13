@@ -770,3 +770,48 @@ def test_following_all_house_races(client):
     with db.session_scope() as s:
         kept = {x.all_group for x in s.scalars(select(Subscription)) if x.all_group}
         assert kept == {"ilhouse", "ilsenate"}
+
+
+def test_unsubscribe_works_for_someone_who_has_been_sent_things(client):
+    """The /unsubscribe 500: Subscriber cascades only cover subscriptions and
+    push_subscriptions, so deleting anyone with notifications or digest_sends
+    rows hit a foreign-key violation. That is everyone who has ever actually
+    received an alert or a digest — 112 of 130 live subscribers when found.
+    """
+    from datetime import UTC, date, datetime
+
+    from isbe_notifier.models import DigestSend, FeedItem, Filing, Notification
+
+    client.post("/api/subscribe", json={
+        "accepts_terms": True, "email": "weekly@example.org",
+        "wants_email": True, "race_slugs": ["president"],
+        "wants_weekly_digest": True,
+    })
+    with db.session_scope() as s:
+        sub = s.scalars(select(Subscriber)).one()
+        sub.email_verified_at = datetime.now(UTC)
+        s.flush()
+        # A weekly-digest recipient necessarily accumulates one of these per send.
+        s.add(DigestSend(subscriber_id=sub.id, kind="weekly",
+                         period_start=date(2026, 10, 5), status="sent"))
+        # And a real-time subscriber accumulates notifications.
+        s.add(FeedItem(guid_seq=500, committee_name="X", report_type="A-1",
+                       source="Filed electronically", url="http://x", guid_url="http://x"))
+        s.flush()
+        filing = Filing(feed_item_seq=500, report_type="A-1", report_class="A1")
+        s.add(filing)
+        s.flush()
+        s.add(Notification(subscriber_id=sub.id, filing_id=filing.id,
+                           channel="email", status="sent"))
+        sid = sub.id
+
+    resp = client.get(f"/unsubscribe?token={tokens.make_token(sid, 'unsubscribe')}")
+    assert resp.status_code == 200, "unsubscribe must not 500"
+    assert "unsubscribed" in resp.text.lower()
+
+    with db.session_scope() as s:
+        assert s.get(Subscriber, sid) is None
+        assert s.scalars(select(Subscription)).first() is None
+        # The history rows must go too, or the delete can't complete.
+        assert s.scalars(select(DigestSend)).first() is None
+        assert s.scalars(select(Notification)).first() is None

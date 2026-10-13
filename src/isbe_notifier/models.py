@@ -166,11 +166,21 @@ class Subscriber(Base):
     marketing_opt_in: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
+    # Every table keyed to a subscriber is cleaned up when they unsubscribe.
+    # notifications and digest_sends were missing here, so deleting anyone who
+    # had actually been sent something failed on a foreign-key violation.
+    # passive_deletes defers to the ON DELETE CASCADE on those keys.
     subscriptions: Mapped[list["Subscription"]] = relationship(
-        back_populates="subscriber", cascade="all, delete-orphan"
+        back_populates="subscriber", cascade="all, delete-orphan", passive_deletes=True
     )
     push_subscriptions: Mapped[list["PushSubscription"]] = relationship(
-        back_populates="subscriber", cascade="all, delete-orphan"
+        back_populates="subscriber", cascade="all, delete-orphan", passive_deletes=True
+    )
+    notifications: Mapped[list["Notification"]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True
+    )
+    digest_sends: Mapped[list["DigestSend"]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True
     )
 
 
@@ -183,7 +193,9 @@ class Subscription(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    subscriber_id: Mapped[int] = mapped_column(ForeignKey("subscribers.id"), index=True)
+    subscriber_id: Mapped[int] = mapped_column(
+        ForeignKey("subscribers.id", ondelete="CASCADE"), index=True
+    )
     race_id: Mapped[int | None] = mapped_column(ForeignKey("races.id"), index=True)
     committee_id: Mapped[int | None] = mapped_column(ForeignKey("committees.id"), index=True)
     # Firehose: every filing statewide, regardless of race/committee.
@@ -209,7 +221,9 @@ class PushSubscription(Base):
     __tablename__ = "push_subscriptions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    subscriber_id: Mapped[int] = mapped_column(ForeignKey("subscribers.id"), index=True)
+    subscriber_id: Mapped[int] = mapped_column(
+        ForeignKey("subscribers.id", ondelete="CASCADE"), index=True
+    )
     endpoint: Mapped[str] = mapped_column(Text, unique=True)
     p256dh: Mapped[str] = mapped_column(Text)
     auth: Mapped[str] = mapped_column(Text)
@@ -229,7 +243,9 @@ class Notification(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    subscriber_id: Mapped[int] = mapped_column(ForeignKey("subscribers.id"), index=True)
+    subscriber_id: Mapped[int] = mapped_column(
+        ForeignKey("subscribers.id", ondelete="CASCADE"), index=True
+    )
     filing_id: Mapped[int] = mapped_column(ForeignKey("filings.id"), index=True)
     channel: Mapped[str] = mapped_column(String(20))  # email | push
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending|sent|failed
@@ -248,7 +264,9 @@ class DigestSend(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    subscriber_id: Mapped[int] = mapped_column(ForeignKey("subscribers.id"), index=True)
+    subscriber_id: Mapped[int] = mapped_column(
+        ForeignKey("subscribers.id", ondelete="CASCADE"), index=True
+    )
     kind: Mapped[str] = mapped_column(String(10))  # daily | weekly
     period_start: Mapped[date] = mapped_column(Date)
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending|sent|failed
